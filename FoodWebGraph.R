@@ -32,7 +32,10 @@ FoodWebGraph <- function(MyFoodWeb, IdxFocusSpecies = NULL){
   colnames(EdgesAll) <- c("from", "to","weight", "col")
   # x position des noeuds
   Nodes <- c(1:nrow(MyFoodWeb))
-  x <- runif(nrow(MyFoodWeb))
+  # x <- runif(nrow(MyFoodWeb))
+  xSample <- c(1:nrow(MyFoodWeb))
+  x <- sample(xSample)
+  
   # y position des noeuds (defini par le niveau trophique)
   y <- TrophLevels
   Node_list <- data.frame(Nodes, x, y)

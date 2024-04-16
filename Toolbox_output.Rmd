@@ -22,8 +22,10 @@ library(shiny)
 Le food web doit être une matrice carrée, puisqu'en lignes et en colonnes il doit y avoir les mêmes espèces, et rangées dans le même ordre. Chaque élément de la matrice doit être un numeric. En dehors de la diagonale (qui peut contenir des valeurs différentes de zéro), toute valeur négative doit avoir une valeur positive à sa symétrie (pouvant être différente néanmoins) ; en effet, il doit bien s'agir d'un food web avec uniquement des interactions trophiques, pas de compétition directe, ni commensalisme, ni mutualisme etc.
 
 ```{r}
-#load("MyFoodWeb.Rdata") 
-load("MyFoodWebLake.Rdata")
+#load("MyFoodWeb.Rdata")
+#load("MyFoodWebLake.Rdata")
+load("StableFwbs_TL3.Rdata")
+MyFoodWeb <- StableFwbs_TL3[[5097]][["A"]]
 
 CheckInit <- function(MyFoodWeb){
   if (!is.matrix(MyFoodWeb)){
@@ -49,10 +51,17 @@ CheckInit <- function(MyFoodWeb){
       }
     }
   }
+  # Vérification de l'absence d'espèce non-connectée : si existence alors suppression du réseau
+  FoodWebBis <- MyFoodWeb
+  diag(FoodWebBis) <- 0 # remove self-reg to test if each species is connected with at least another one
+  IdxUnconnected <- which(colSums(FoodWebBis) == 0)
+  MyFoodWeb <- MyFoodWeb[-IdxUnconnected,-IdxUnconnected]
+  print(paste0("Species ", paste(IdxUnconnected, collapse = ", "), " are removed because unconnected"))
+  return(MyFoodWeb)
 }
 
 #MyFoodWeb <- matrix(c(1,2,-3,1), nrow = 2, ncol = 2)
-CheckInit(MyFoodWeb)
+MyFoodWeb <- CheckInit(MyFoodWeb)
 ```
 
 ## Identification et visualisation des chaînes trophiques
@@ -87,15 +96,15 @@ width <- 8  # Ajustez la largeur selon vos besoins
 height <- 6  # Ajustez la hauteur selon vos besoins
 options(repr.plot.width = width, repr.plot.height = height)
 
-scale <- 1 # to adjust edges width
-plot(Graph, vertex.size = 5, 
+scale <- 5 # to adjust edges width
+plot(Graph, vertex.size = 8, 
     edge.width = as.numeric(E(Graph)$weight)*scale,
     edge.curved = 0.5, edge.color = E(Graph)$col)
 
 # Add names of species for each node, if any
 Names <- rownames(MyFoodWeb)
 if (is.null(Names)){
-  Names <- seq(0, nrow(MyFoodWeb))
+  Names <- seq(1, nrow(MyFoodWeb))
 }
 text(x = max(par("usr")[1], par("usr")[2]) - 0.5, 
      y = seq(min(par("usr")[3], par("usr")[4]) + 0.1, 
@@ -105,11 +114,54 @@ text(x = max(par("usr")[1], par("usr")[2]) - 0.5,
 
 ```
 
+## Qui est relié avec qui, pour chaque ordre jusqu'à l'ordre maximal choisi.
+
+```{r}
+
+SpNames <- paste(1:nrow(MyFoodWeb))
+# Créer un objet vide avec 10 lignes et 5 colonnes
+WhoWithWho <- vector("list", nrow(MyFoodWeb))
+# Direct effect without self-reg
+I <- diag(1, nrow = nrow(MyFoodWeb))
+DirectEffects <- MyFoodWeb + I # Extract the normalized self-regulation 
+MaxOrder <- 5
+# ComputeLinks : for each Sp find all non-null interactions for each order until MaxOrder
+# Also find the cumulative orderLim from which each Sp has interacted with all others
+ComputeLinks <- function(i, DirectEffects, MaxOrder, SpNames){
+  order <- 1
+  InnerList <- list()
+  A <- DirectEffects
+  OrderLim <- NULL
+  IdxCumul <- c()
+  cond <- TRUE
+  while(order <= MaxOrder){
+    Idx <- which(A[,i] != 0)
+    InnerList[[paste0("order", order)]] <- Idx
+    IdxCumul <- c(IdxCumul, Idx)
+    if (all(SpNames %in% IdxCumul) & cond){
+      OrderLim <- order
+      cond <- FALSE
+    }
+    order <- order + 1
+    A <- DirectEffects%^%order
+  }
+  InnerList[["orderLim"]] <- OrderLim
+  return(InnerList)
+}
+# Each outer list is a species, which contain as much inner lists as the chosen MaxOrder with the idx of species which who its interact for each, + the orderLim
+WhoWithWho <- lapply(seq_along(WhoWithWho), function(i) ComputeLinks(i, DirectEffects, MaxOrder, SpNames))
+SpNames <- rownames(MyFoodWeb)
+names(WhoWithWho) <- SpNames
+
+#print(WhoWithWho)
+```
+
 ```{r}
 # Visualization of Inverted chain(s)
 ## outputs : a graph representing the food web, with links of inverted chain in colors (if any), all others links are black.
+library("scales")
 source("InvertedChainGraph.R")
-#debug(InvertedChainGraph)
+debug(InvertedChainGraph)
 Graph <- InvertedChainGraph(MyFoodWeb, FoodWebMetrics)
 
 par(mar = c(1, 1, 1, 1)) # adjust margins
@@ -199,7 +251,7 @@ diag(MyFoodWeb) <- -1
 Tmax <- 1000
 Tstep <- 0.1
 GrowthRate <- 0.1
-DeathRate <- 0.001
+DeathRate <- 0.01
 Outputs <- FoodWebEquilibrium(MyFoodWeb, Tmax, Tstep, GrowthRate, DeathRate)
 # Visualization
 Dynamics <- Outputs[["Dynamics"]]
@@ -230,8 +282,8 @@ diag(MyFoodWeb) <- -1
 Tmax <- 1000
 Tstep <- 0.1
 GrowthRate <- 0.1
-DeathRate <- 0.001
-Perturb <- 0.01
+DeathRate <- 0.01
+Perturb <- 0.05
 Dynamics <- FoodWebPerturb(MyFoodWeb, Tmax, Tstep, GrowthRate, DeathRate, 1, Perturb, type = "Positive")
 
 # Version with colors = each species
