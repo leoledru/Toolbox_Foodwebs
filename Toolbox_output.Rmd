@@ -161,9 +161,9 @@ names(WhoWithWho) <- SpNames
 ## outputs : a graph representing the food web, with links of inverted chain in colors (if any), all others links are black.
 library("scales")
 source("InvertedChainGraph.R")
-debug(InvertedChainGraph)
-Graph <- InvertedChainGraph(MyFoodWeb, FoodWebMetrics)
-
+#debug(InvertedChainGraph)
+Outputs <- InvertedChainGraph(MyFoodWeb, FoodWebMetrics)
+Graph <- Outputs[["Graph"]]
 par(mar = c(1, 1, 1, 1)) # adjust margins
 width <- 8  # Ajustez la largeur selon vos besoins
 height <- 6  # Ajustez la hauteur selon vos besoins
@@ -184,6 +184,8 @@ text(x = max(par("usr")[1], par("usr")[2]) - 0.5,
              max(par("usr")[3], par("usr")[4]) - 0.1, 
              length.out = length(Names)),
      labels = paste(seq_along(Names), Names, sep = ". "), pos = 4, col = "black", cex = 1)
+# Warning : si plusieurs chaînes avec inversion ont un lien en commun une couleur va se superposer à l'autre
+print(Outputs[["InvertedChains"]])
 ```
 
 ## Visualisation du réseau dans l'espace des valeurs propres

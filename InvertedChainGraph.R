@@ -49,9 +49,12 @@ InvertedChainGraph <- function(MyFoodWeb, FoodWebMetrics){
   # y position des noeuds (defini par le niveau trophique)
   y <- TrophLevels
   Node_list <- data.frame(Nodes, x, y)
-  
   # Créer le graphique à partir des arêtes et des positions x et y
   Graph <- graph_from_data_frame(vertices = Node_list, d = EdgesAll, directed = F)
   
-  return(Graph)
+  # Save inverted chains to discredit them when links superpose
+  InvertedChains <- list("Tops" = Tops, "Middles" = Middles, "Bottoms" = Bottom)
+  
+  Ouputs <- list("InvertedChains" = InvertedChains, "Graph" = Graph)
+  return(Ouputs)
 }
