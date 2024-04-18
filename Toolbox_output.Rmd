@@ -2,26 +2,44 @@
 title: "Toolbox Food Webs Analysis"
 author: "Léo Ledru"
 date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
 params:
   lang: fr
-output: html_document
 ---
+
+# Introduction
+
+Ce document RMarkdown est dédié à l'analyse de réseaux trophiques, en particulier l'étude des effets indirects entre les espèces du réseau et le processus de cascade trophique.
+
+-   1) **Obligatoire :** [Loading food web and verifications](#loading_section)
+
+-   2) [Analyse du réseau (mesures de différents proxies)](#analysis_section)
+
+-   3) [Référencement des effets indirects](#listing_indirect_section)
+
+-   4) [Visualisation du réseau](#visualization_section)
+
+-   5) [Visualisation des inversions de cascades trophiques](#inverted_cascade_section)
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{r}
 setwd("~/Documents/Post_Doc_CARRTEL/R/Toolbox")
 library(rmarkdown)
 library(shiny)
 ```
 
-## Loading food web and verifications
+## <a name="loading_section">Loading food web and verifications</a>
 
-Le food web doit être une matrice carrée, puisqu'en lignes et en colonnes il doit y avoir les mêmes espèces, et rangées dans le même ordre. Chaque élément de la matrice doit être un numeric. En dehors de la diagonale (qui peut contenir des valeurs différentes de zéro), toute valeur négative doit avoir une valeur positive à sa symétrie (pouvant être différente néanmoins) ; en effet, il doit bien s'agir d'un food web avec uniquement des interactions trophiques, pas de compétition directe, ni commensalisme, ni mutualisme etc.
+**This section must be run before any other section.**
+
+La première étape nécessaire est le chargement d'un réseau trophique sous la forme d'une matrice d'interaction. C'est une matrice carrée puisque les lignes et les colonnes correspondent aux espèces du réseau. Elles sont rangées dans le même ordre de sorte que la diagonale de la matrice correspond à la self-regulation, l'effet direct d'une espèce sur elle-même. Tandis que tous les autres éléments $a_ij$ de la matrice correspondent à l'effet de l'espèce $j$ (en colonne) sur l'espèce $i$ (en ligne). Les éléments doivent être des numeric. Il doit s'agir d'un food web, donc chaque valeur négative doit avoir une symétrique positive (néanmoins elle peut être différente, typiquement plus faible à cause d'un coefficient de conversion).
+
+Le bloc de code suivant charge un réseau de test, puis la fonction *CheckInit* procède à une vérification du réseau (la matrice d'interaction) qui doit valider les critères précédemment cités sous peine de retourner un message d'erreur.
 
 ```{r}
+# Load your food web
 #load("MyFoodWeb.Rdata")
 #load("MyFoodWebLake.Rdata")
 load("StableFwbs_TL3.Rdata")
@@ -57,6 +75,7 @@ CheckInit <- function(MyFoodWeb){
   IdxUnconnected <- which(colSums(FoodWebBis) == 0)
   MyFoodWeb <- MyFoodWeb[-IdxUnconnected,-IdxUnconnected]
   print(paste0("Species ", paste(IdxUnconnected, collapse = ", "), " are removed because unconnected"))
+  print("The food web is validated")
   return(MyFoodWeb)
 }
 
@@ -64,11 +83,41 @@ CheckInit <- function(MyFoodWeb){
 MyFoodWeb <- CheckInit(MyFoodWeb)
 ```
 
-## Identification et visualisation des chaînes trophiques
+## <a name="analysis_section">Analyse du réseau : collectivité, connectance, omnivorie, cascades trophiques, intégration des chaînes trophiques</a>
+
+Cette section calcule plusieurs proxies sur le réseau et stocke l'ensemble des résultats dans une liste de listes nommée *FoodWebMetrics*. Cette liste contient :
+
+-   La collectivité du réseau (Zelnik et al. 2024)
+
+-   La connectance du réseau
+
+-   L'omnivorie moyen du réseau (la moyenne de l'omnivorie de chaque espèce)
+
+-   Une sous-liste comprenant pour chaque chaîne trophique du réseau :
+
+-   <div>
+
+    -    L'indice du prédateur (*Top*)
+
+    -   L'indice du consommateur (*Middle*)
+
+    -   L'indice de la ressource (*Bottom*)
+
+    -   La valeur de la cascade trophique à court terme, c'est-à-dire l'effet indirect uniquement descendant du *Top* au *Bottom*
+
+    -   La valeur de la cascade trophique à long terme, c'est-à-dire l'effet net du *Top* au *Bottom*
+
+    -   Le ratio cascade trophique long terme / court terme montrant s'il y a une divergence entre les deux cascades (Ledru et al. 2024)
+
+    -   La valeur d'intégration de la chaîne dans le réseau, qui correspond au ratio entre les interactions au sein de la chaîne et les interactions entre la chaîne et le reste du réseau, un proxy de la collectivité expériencée par la chaîne trophique (Ledru et al. 2024)
+
+    </div>
+
+**NB** : L'identification des chaînes trophiques se fait ainsi : 1) calcul du niveau trophique de chaque espèce, 2) identification du niveau trophique maximum (doit valoir au moins 3) et des espèces ayant ce niveau (les *Top*), 3) identification des espèces ayant un niveau trophique de deux crans inférieur au niveau maximum (les *Bottom*), 4) identification des espèces intermédiaire reliant les *Top* et les *Bottom* (les *Middle*). Donc par définition cette analyse considère une chaîne trophique comme partant du sommet du réseau jusqu'au niveau n-2. Dans le cas où un réseau a un niveau trophique maximum supérieur à 3 les chaînes trophiques ne descendront pas jusqu'aux espèces basales.
 
 Analyse de MyFoodWeb afin de référencer toutes les chaînes trophiques (TL max 3 ou 4, from top to n-2 et top to basal) en notant idx de prédateurs, consos inters et ressources. Mesure d'une cascade n-step ou non sur ces chaînes (si l'omnivorie prive la cascade n-step). Mesure omnivorie globale du réseau ainsi que collectivité, connectance.
 
-```{r}
+```{r message=FALSE}
 library(NetIndices) # to compute trophic levels and omnivory
 library(sparsevar) # for spectralRadius function
 library(expm) # for %^% operator
@@ -81,40 +130,7 @@ source("FoodWebAnalysis.R")
 FoodWebMetrics <- FoodWebAnalysis(MyFoodWeb)
 ```
 
-```{r}
-library(igraph) # to show food web as a graph
-library(RColorBrewer)
-
-# Visualization
-## outputs : a graph representing the food web, nodes are species and black curves are trophic links. If a focus species is chosen (IdxFocusSpecies = "the numeric index of the chosen species"), its direct links will show in red and its second-order links in blue.
-source("FoodWebGraph.R")
-#debug(FoodWebGraph)
-Graph <- FoodWebGraph(MyFoodWeb, IdxFocusSpecies = 1)
-
-par(mar = c(1, 1, 1, 1)) # adjust margins
-width <- 8  # Ajustez la largeur selon vos besoins
-height <- 6  # Ajustez la hauteur selon vos besoins
-options(repr.plot.width = width, repr.plot.height = height)
-
-scale <- 5 # to adjust edges width
-plot(Graph, vertex.size = 8, 
-    edge.width = as.numeric(E(Graph)$weight)*scale,
-    edge.curved = 0.5, edge.color = E(Graph)$col)
-
-# Add names of species for each node, if any
-Names <- rownames(MyFoodWeb)
-if (is.null(Names)){
-  Names <- seq(1, nrow(MyFoodWeb))
-}
-text(x = max(par("usr")[1], par("usr")[2]) - 0.5, 
-     y = seq(min(par("usr")[3], par("usr")[4]) + 0.1, 
-             max(par("usr")[3], par("usr")[4]) - 0.1, 
-             length.out = length(Names)),
-     labels = paste(seq_along(Names), Names, sep = ". "), pos = 4, col = "black", cex = 1)
-
-```
-
-## Qui est relié avec qui, pour chaque ordre jusqu'à l'ordre maximal choisi.
+## <a name="listing_indirect_section">Qui est relié avec qui, pour chaque ordre jusqu'à l'ordre maximal choisi.</a>
 
 ```{r}
 
@@ -156,7 +172,46 @@ names(WhoWithWho) <- SpNames
 #print(WhoWithWho)
 ```
 
-```{r}
+## <a name="visualization_section">Visualisation du réseau</a> {data-link="<a name=\"visualization_section\">Identification et visualisation des chaînes trophiques</a>"}
+
+```{r message=FALSE}
+library(igraph) # to show food web as a graph
+library(RColorBrewer)
+
+# Visualization
+## outputs : a graph representing the food web, nodes are species and black curves are trophic links. If a focus species is chosen (IdxFocusSpecies = "the numeric index of the chosen species"), its direct links will show in red and its second-order links in blue.
+source("FoodWebGraph.R")
+#debug(FoodWebGraph)
+Graph <- FoodWebGraph(MyFoodWeb, IdxFocusSpecies = NULL)
+
+par(mar = c(1, 1, 1, 1)) # adjust margins
+width <- 8  # Ajustez la largeur selon vos besoins
+height <- 6  # Ajustez la hauteur selon vos besoins
+options(repr.plot.width = width, repr.plot.height = height)
+
+scale <- 5 # to adjust edges width
+plot(Graph, vertex.size = 8, 
+    edge.width = as.numeric(E(Graph)$weight)*scale,
+    edge.curved = 0.5, edge.color = E(Graph)$col)
+
+# Add names of species for each node, if any
+Names <- rownames(MyFoodWeb)
+if (is.null(Names)){
+  Names <- seq(1, nrow(MyFoodWeb))
+}
+text(x = max(par("usr")[1], par("usr")[2]) - 0.5, 
+     y = seq(min(par("usr")[3], par("usr")[4]) + 0.1, 
+             max(par("usr")[3], par("usr")[4]) - 0.1, 
+             length.out = length(Names)),
+     labels = paste(seq_along(Names), Names, sep = ". "), pos = 4, col = "black", cex = 1)
+
+```
+
+## 
+
+## <a name="inverted_cascade_section">Inverted chain</a>
+
+```{r message=FALSE}
 # Visualization of Inverted chain(s)
 ## outputs : a graph representing the food web, with links of inverted chain in colors (if any), all others links are black.
 library("scales")
@@ -194,7 +249,7 @@ Calculer valeurs propres (avec self-reg normalisée extraite, donc diag = 0) et 
 
 Également un algo pour estimer la self-reg minimale à appliquer pour "stabilité" ?
 
-```{r}
+```{r message=FALSE}
 library(ggplot2)
 
 # Compute eigen values, their barycentre and the collectivity
@@ -240,7 +295,7 @@ ggplot(ValuesDf, aes(x = Re, y = Im)) +
 
 Commence par tester si le réseau est stable : simulations successives en retirant les espèces éteintes à chaque fois tant qu'il y en a.
 
-```{r, results='asis'}
+```{r, message=FALSE, results='asis'}
 library(deSolve)
 
 # Apply a Generalized Lotka-Volterra on the food web until a stable configuration (by removing extinct species) 

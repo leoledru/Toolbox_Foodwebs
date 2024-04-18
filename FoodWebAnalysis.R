@@ -20,7 +20,7 @@ FoodWebAnalysis <- function(MyFoodWeb, type = "n2"){
   # find all trophic chains
   MaxTroph <- max(TrophLevels)
   if (MaxTroph < 3){
-    stop("Erreur : le niveau trophique maximal doit être de trois ou quatre")
+    stop("Erreur : le niveau trophique maximal doit être au moins trois pour avoir des chaînes trophiques")
   }
   IdxMaxTroph <- which(TrophLevels == MaxTroph)
   if (type == "n2"){
@@ -53,6 +53,45 @@ FoodWebAnalysis <- function(MyFoodWeb, type = "n2"){
       }
     }
   }
+  
+#  else if (type == "basal"){
+#    SecondOrderEffects <- DirectEffects%^%2
+#    IdxBasal <- which(TrophLevels == 1)
+#    for (Top in IdxMaxTroph){
+#      for (Bottom in IdxBasal){
+#        DirectCascade <- SecondOrderEffects[Bottom, Top] + DirectEffects[Bottom, Top] # Direct effects must be include, in case of omnivory
+        
+        # Méthode purement descendante :
+        # 
+        
+        
+#        # find middle node(s) of the chain
+#        Middle <- which(DirectEffects[Top, ] > 0 & DirectEffects[Bottom, ] < 0)
+#        Middle <- Middle[Middle %in% which(TrophLevels == (MaxTroph - 1))] # prevent false trophic chain because of intraguild predation
+#        if (!is_empty(Middle)){ # if there is a trophic chain from top to bottom
+#          NetCascade <- NetEffects[Bottom, Top]
+#          # ratio of short-term and long-term cascade
+#          RatioCascades <- NetCascade / DirectCascade
+#          # interaction within chain
+#          WithinChain <- sum(abs(DirectEffects[c(Middle, Bottom), Top])) + sum(abs(DirectEffects[c(Top, Bottom), Middle])) +
+#            sum(abs(DirectEffects[c(Middle, Top), Bottom]))
+#          # interaction between chain and foodweb
+#          IdxChain <- c(Bottom, Middle, Top)
+#          OutOfChain <- sum(abs(DirectEffects[IdxChain, which(!(1:nrow(DirectEffects) %in% IdxChain))])) +
+#            sum(abs(DirectEffects[which(!(1:nrow(DirectEffects) %in% IdxChain)), IdxChain]))
+#          # integration of the chain 
+#          IntegChain <- OutOfChain / WithinChain
+#          # store in dataframe
+#          for (middle in Middle){ # if several middle nodes, add each one by one
+#            FoodWebMetrics <- rbind(FoodWebMetrics, list(Top, middle, Bottom, DirectCascade, NetCascade, RatioCascades, IntegChain))
+#          }
+#        }
+#      }
+#    }
+#  }
+  
+  
+  
   colnames(FoodWebMetrics) <- c("Top", "Middle", "Bottom", "DirectCascade", "NetCascade", "RatioCascades", "IntegChain")
   Outputs <- list("Collectivity" = Collectivity, "Connectance" = Connectance, "MeanOmnivory" = OmnivoryMean,
                   "FoodWebMetrics" = FoodWebMetrics)
