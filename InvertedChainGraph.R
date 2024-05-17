@@ -4,6 +4,8 @@ InvertedChainGraph <- function(MyFoodWeb, FoodWebMetrics){
   
   # Trophic Levels for nodes' y position
   I <- diag(1, nrow = nrow(MyFoodWeb))
+  D <- diag(MyFoodWeb) # extract the self-regulation (diagonal)
+  MyFoodWeb <- MyFoodWeb / -D # normalize by self-regulation --> non-dimensional interaction matrix
   DirectEffects <- MyFoodWeb + I # Extract the normalized self-regulation
   Flow <- -1 * DirectEffects * (DirectEffects < 0)
   Flow[is.na(Flow)] <- 0
@@ -53,8 +55,13 @@ InvertedChainGraph <- function(MyFoodWeb, FoodWebMetrics){
   Graph <- graph_from_data_frame(vertices = Node_list, d = EdgesAll, directed = F)
   
   # Save inverted chains to discredit them when links superpose
-  InvertedChains <- list("Tops" = Tops, "Middles" = Middles, "Bottoms" = Bottom)
+  if (!is_empty(IdxInvertedChain)){
+    InvertedChains <- list("Tops" = Tops, "Middles" = Middles, "Bottoms" = Bottom)
+    Ouputs <- list("InvertedChains" = InvertedChains, "Graph" = Graph)
+  }else{
+    Ouputs <- list("InvertedChains" = NULL, "Graph" = Graph)
+  }
   
-  Ouputs <- list("InvertedChains" = InvertedChains, "Graph" = Graph)
+  
   return(Ouputs)
 }

@@ -2,6 +2,8 @@ FoodWebGraph <- function(MyFoodWeb, IdxFocusSpecies = NULL){
   
   # Trophic Levels for nodes' y position
   I <- diag(1, nrow = nrow(MyFoodWeb))
+  D <- diag(MyFoodWeb) # extract the self-regulation (diagonal)
+  MyFoodWeb <- MyFoodWeb / -D # normalize by self-regulation --> non-dimensional interaction matrix
   DirectEffects <- MyFoodWeb + I # Extract the normalized self-regulation
   SecondOrderEffects <- DirectEffects%^%2
   Flow <- -1 * DirectEffects * (DirectEffects < 0)

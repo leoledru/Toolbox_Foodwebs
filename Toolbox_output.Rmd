@@ -5,6 +5,7 @@ date: "`r Sys.Date()`"
 output:
   html_document: default
   pdf_document: default
+bibliography: references.bib
 params:
   lang: fr
 ---
@@ -13,15 +14,43 @@ params:
 
 Ce document RMarkdown est dédié à l'analyse de réseaux trophiques, en particulier l'étude des effets indirects entre les espèces du réseau et le processus de cascade trophique.
 
--   1) **Obligatoire :** [Loading food web and verifications](#loading_section)
+-   <div>
 
--   2) [Analyse du réseau (mesures de différents proxies)](#analysis_section)
+    0.  Inférence de réseaux trophiques à partir de données (abondances, caractéristiques biologiques...) : Vagnon et al. 2021 (Ecosphere)
 
--   3) [Référencement des effets indirects](#listing_indirect_section)
+    </div>
 
--   4) [Visualisation du réseau](#visualization_section)
+<!-- -->
 
--   5) [Visualisation des inversions de cascades trophiques](#inverted_cascade_section)
+-   <div>
+
+    1.  **Obligatoire :** [Loading food web and verifications](#loading_section)
+
+    </div>
+
+-   <div>
+
+    2.  [Analyse du réseau (mesures de différents proxies)](#analysis_section)
+
+    </div>
+
+-   <div>
+
+    3.  [Référencement des effets indirects](#listing_indirect_section)
+
+    </div>
+
+-   <div>
+
+    4.  [Visualisation du réseau](#visualization_section)
+
+    </div>
+
+-   <div>
+
+    5.  [Visualisation des inversions de cascades trophiques](#inverted_cascade_section)
+
+    </div>
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -30,34 +59,60 @@ library(rmarkdown)
 library(shiny)
 ```
 
+## <a name="foodweb_inference">Inference of food web from data (Vagnon et al. 2021)</a>
+
+```{r}
+# Main Code
+source("01_cv_Codes_AltitudeLakes.R")
+# Functions used in the main code
+source("cv_Functions_AltitudeLakes.R")
+
+```
+
 ## <a name="loading_section">Loading food web and verifications</a>
 
-**This section must be run before any other section.**
+**This section must be run before any other section below.**
 
-La première étape nécessaire est le chargement d'un réseau trophique sous la forme d'une matrice d'interaction. C'est une matrice carrée puisque les lignes et les colonnes correspondent aux espèces du réseau. Elles sont rangées dans le même ordre de sorte que la diagonale de la matrice correspond à la self-regulation, l'effet direct d'une espèce sur elle-même. Tandis que tous les autres éléments $a_ij$ de la matrice correspondent à l'effet de l'espèce $j$ (en colonne) sur l'espèce $i$ (en ligne). Les éléments doivent être des numeric. Il doit s'agir d'un food web, donc chaque valeur négative doit avoir une symétrique positive (néanmoins elle peut être différente, typiquement plus faible à cause d'un coefficient de conversion).
+La première étape nécessaire est le chargement d'un réseau trophique sous la forme d'une matrice d'interaction. Cette matrice doit respectée plusieurs propriétés :
 
-Le bloc de code suivant charge un réseau de test, puis la fonction *CheckInit* procède à une vérification du réseau (la matrice d'interaction) qui doit valider les critères précédemment cités sous peine de retourner un message d'erreur.
+-   Elle doit être carrée puisque les lignes et les colonnes correspondent aux espèces du réseau.
+
+-   Tous les éléments de la matrice doivent être des *numeric*.
+
+-   Les espèces en lignes et en colonnes doivent être rangées dans le même ordre de sorte que la diagonale de la matrice correspond à la self-regulation, c'est-à-dire l'effet direct d'une espèce sur elle-même. Tandis que tous les autres éléments $a_ij$ de la matrice correspondent à l'effet de l'espèce $j$ (en colonne) sur l'espèce $i$ (en ligne).
+
+-   Les éléments de la diagonale correspondent à la self-regulation : s'ils ont été inférés ils doivent bien être $<0$ ; sinon ils sont paramétrés à $-1$ comme cela la normalisation par la self-regulation permettant d'obtenir la matrice adimensionnelle pour le calcul des effets indirects [@zelnik2022collectively] ne changera pas les valeurs d'interactions inférées.
+
+-   La matrice doit représenter un réseau purement trophique, donc chaque valeur négative doit avoir une symétrique positive (néanmoins la valeur positive peut être différente, typiquement plus faible à cause d'un coefficient de conversion).
+
+Le bloc de code suivant charge un réseau de test, puis la fonction ***CheckInit*** procède à une vérification du réseau (de la matrice d'interaction) qui doit valider les propriétés précédemment citées sous peine de retourner un message d'erreur.
 
 ```{r}
 # Load your food web
+
+# Empirical test food web
 #load("MyFoodWeb.Rdata")
-#load("MyFoodWebLake.Rdata")
-load("StableFwbs_TL3.Rdata")
-MyFoodWeb <- StableFwbs_TL3[[5097]][["A"]]
+load("MyFoodWebLake.Rdata")
+
+# Simulated test food web
+# load("StableFwbs_TL3.Rdata")
+# MyFoodWeb <- StableFwbs_TL3[[5097]][["A"]]
 
 CheckInit <- function(MyFoodWeb){
   if (!is.matrix(MyFoodWeb)){
     stop("Erreur : la variable n'est pas une matrice")
   }
   if (!all(is.numeric(MyFoodWeb))){
-    stop("Erreur : la matrice doit contenir uniquement des nombres")
+    stop("Erreur : la matrice doit contenir uniquement des numeric")
   }
   if (nrow(MyFoodWeb) != ncol(MyFoodWeb)){
     stop("Erreur : la matrice n'est pas carrée")
   }
-  # Diagonale must be -1, because interactions are relative to self-regulation
-  if (!all(diag(MyFoodWeb)==-1)){
-    stop("Erreur : toutes les valeurs diagonales doivent valoir -1")
+  # No diagonal element can be empty, zero or positive
+  for (element in diag(MyFoodWeb)) {
+    if (is.na(element) || element == 0 || element > 0) {
+      stop("Erreur : les élements de la diagonales doivent être des numeric < 0. Veuillez vérifier la diagonale de la matrice d'interaction. Si des éléments de la diagonale n'ont pas inférés mettez une valeur de -1.")
+    }
   }
   # Vérification de la symétrie positif-négatif (uniquement liens trophiques)
   for (i in 1:nrow(MyFoodWeb)){
@@ -73,13 +128,16 @@ CheckInit <- function(MyFoodWeb){
   FoodWebBis <- MyFoodWeb
   diag(FoodWebBis) <- 0 # remove self-reg to test if each species is connected with at least another one
   IdxUnconnected <- which(colSums(FoodWebBis) == 0)
-  MyFoodWeb <- MyFoodWeb[-IdxUnconnected,-IdxUnconnected]
-  print(paste0("Species ", paste(IdxUnconnected, collapse = ", "), " are removed because unconnected"))
+  if (length(IdxUnconnected) > 0){
+    MyFoodWeb <- MyFoodWeb[-IdxUnconnected,-IdxUnconnected]
+    print(paste0("Species ", paste(IdxUnconnected, collapse = ", "), " are removed because unconnected"))
+  }
   print("The food web is validated")
   return(MyFoodWeb)
 }
 
 #MyFoodWeb <- matrix(c(1,2,-3,1), nrow = 2, ncol = 2)
+#debug(CheckInit)
 MyFoodWeb <- CheckInit(MyFoodWeb)
 ```
 
@@ -97,7 +155,7 @@ Cette section calcule plusieurs proxies sur le réseau et stocke l'ensemble des 
 
 -   <div>
 
-    -    L'indice du prédateur (*Top*)
+    -   L'indice du prédateur (*Top*)
 
     -   L'indice du consommateur (*Middle*)
 
@@ -113,7 +171,7 @@ Cette section calcule plusieurs proxies sur le réseau et stocke l'ensemble des 
 
     </div>
 
-**NB** : L'identification des chaînes trophiques se fait ainsi : 1) calcul du niveau trophique de chaque espèce, 2) identification du niveau trophique maximum (doit valoir au moins 3) et des espèces ayant ce niveau (les *Top*), 3) identification des espèces ayant un niveau trophique de deux crans inférieur au niveau maximum (les *Bottom*), 4) identification des espèces intermédiaire reliant les *Top* et les *Bottom* (les *Middle*). Donc par définition cette analyse considère une chaîne trophique comme partant du sommet du réseau jusqu'au niveau n-2. Dans le cas où un réseau a un niveau trophique maximum supérieur à 3 les chaînes trophiques ne descendront pas jusqu'aux espèces basales.
+**NB** : L'identification des chaînes trophiques se fait ainsi : 1) calcul du niveau trophique de chaque espèce, 2) identification du niveau trophique maximum (doit valoir au moins 3) et des espèces ayant ce niveau (les *Top*), 3) identification des espèces ayant un niveau trophique de deux crans inférieur au niveau maximum (les *Bottom*), 4) identification des espèces intermédiaire reliant les *Top* et les *Bottom* (les *Middle*). Donc cette analyse considère une chaîne trophique comme partant du sommet du réseau jusqu'au niveau n-2. Dans le cas où un réseau a un niveau trophique maximum supérieur à 3 les chaînes trophiques ne descendront pas jusqu'aux espèces basales.
 
 Analyse de MyFoodWeb afin de référencer toutes les chaînes trophiques (TL max 3 ou 4, from top to n-2 et top to basal) en notant idx de prédateurs, consos inters et ressources. Mesure d'une cascade n-step ou non sur ces chaînes (si l'omnivorie prive la cascade n-step). Mesure omnivorie globale du réseau ainsi que collectivité, connectance.
 
@@ -122,12 +180,14 @@ library(NetIndices) # to compute trophic levels and omnivory
 library(sparsevar) # for spectralRadius function
 library(expm) # for %^% operator
 library(purrr) # is_empty function
+library(rlist) # for list.reverse()
 
 # Analysis fo the food web
 ## outputs : a list with some food web metrics (collectivity, connectance, mean omnivory) and a dataframe listing all trophic chains within the food web (indices of species at the top, middle, and bottom of each chain), with their values of n-step cascade, net cascade, the ratio between the two cascades, and a measure of integration of the chain within the food web (interactions within the chain versus between the chain and the food web).
 source("FoodWebAnalysis.R")
 #debug(FoodWebAnalysis)
 FoodWebMetrics <- FoodWebAnalysis(MyFoodWeb)
+head(FoodWebMetrics)
 ```
 
 ## <a name="listing_indirect_section">Qui est relié avec qui, pour chaque ordre jusqu'à l'ordre maximal choisi.</a>
@@ -139,7 +199,9 @@ SpNames <- paste(1:nrow(MyFoodWeb))
 WhoWithWho <- vector("list", nrow(MyFoodWeb))
 # Direct effect without self-reg
 I <- diag(1, nrow = nrow(MyFoodWeb))
-DirectEffects <- MyFoodWeb + I # Extract the normalized self-regulation 
+D <- diag(MyFoodWeb) # extract the self-regulation (diagonal)
+MyFoodWeb <- MyFoodWeb / -D # normalize by self-regulation --> non-dimensional interaction matrix
+DirectEffects <- MyFoodWeb + I # Extract the normalized self-regulation
 MaxOrder <- 5
 # ComputeLinks : for each Sp find all non-null interactions for each order until MaxOrder
 # Also find the cumulative orderLim from which each Sp has interacted with all others
@@ -169,7 +231,7 @@ WhoWithWho <- lapply(seq_along(WhoWithWho), function(i) ComputeLinks(i, DirectEf
 SpNames <- rownames(MyFoodWeb)
 names(WhoWithWho) <- SpNames
 
-#print(WhoWithWho)
+head(WhoWithWho)
 ```
 
 ## <a name="visualization_section">Visualisation du réseau</a> {data-link="<a name=\"visualization_section\">Identification et visualisation des chaînes trophiques</a>"}
@@ -182,14 +244,14 @@ library(RColorBrewer)
 ## outputs : a graph representing the food web, nodes are species and black curves are trophic links. If a focus species is chosen (IdxFocusSpecies = "the numeric index of the chosen species"), its direct links will show in red and its second-order links in blue.
 source("FoodWebGraph.R")
 #debug(FoodWebGraph)
-Graph <- FoodWebGraph(MyFoodWeb, IdxFocusSpecies = NULL)
+Graph <- FoodWebGraph(MyFoodWeb, IdxFocusSpecies = 1)
 
 par(mar = c(1, 1, 1, 1)) # adjust margins
 width <- 8  # Ajustez la largeur selon vos besoins
 height <- 6  # Ajustez la hauteur selon vos besoins
 options(repr.plot.width = width, repr.plot.height = height)
 
-scale <- 5 # to adjust edges width
+scale <- 1 # to adjust edges width
 plot(Graph, vertex.size = 8, 
     edge.width = as.numeric(E(Graph)$weight)*scale,
     edge.curved = 0.5, edge.color = E(Graph)$col)
@@ -207,8 +269,6 @@ text(x = max(par("usr")[1], par("usr")[2]) - 0.5,
 
 ```
 
-## 
-
 ## <a name="inverted_cascade_section">Inverted chain</a>
 
 ```{r message=FALSE}
@@ -216,7 +276,7 @@ text(x = max(par("usr")[1], par("usr")[2]) - 0.5,
 ## outputs : a graph representing the food web, with links of inverted chain in colors (if any), all others links are black.
 library("scales")
 source("InvertedChainGraph.R")
-#debug(InvertedChainGraph)
+# debug(InvertedChainGraph)
 Outputs <- InvertedChainGraph(MyFoodWeb, FoodWebMetrics)
 Graph <- Outputs[["Graph"]]
 par(mar = c(1, 1, 1, 1)) # adjust margins
@@ -225,7 +285,7 @@ height <- 6  # Ajustez la hauteur selon vos besoins
 options(repr.plot.width = width, repr.plot.height = height)
 
 scale <- 1 # to adjust edges width
-plot(Graph, vertex.size = 5, 
+plot(Graph, vertex.size = 8, 
     edge.width = as.numeric(E(Graph)$weight)*scale,
     edge.curved = 0.5, edge.color = E(Graph)$col)
 
@@ -249,14 +309,17 @@ Calculer valeurs propres (avec self-reg normalisée extraite, donc diag = 0) et 
 
 Également un algo pour estimer la self-reg minimale à appliquer pour "stabilité" ?
 
-```{r message=FALSE}
+```{r message=FALSE, warning=FALSE}
 library(ggplot2)
 
 # Compute eigen values, their barycentre and the collectivity
 I <- diag(1, nrow = nrow(MyFoodWeb))
-ValuesVectors <- eigen(MyFoodWeb + I)
+D <- diag(MyFoodWeb) # extract the self-regulation (diagonal)
+MyFoodWeb <- MyFoodWeb / -D # normalize by self-regulation --> non-dimensional interaction matrix
+DirectEffects <- MyFoodWeb + I # Extract the normalized self-regulation
+ValuesVectors <- eigen(DirectEffects)
 Values <- ValuesVectors[[1]]
-Collect <- spectralRadius(MyFoodWeb + I)
+Collect <- spectralRadius(DirectEffects)
 Barycentre <- sum(Values) / length(Values)
 # organize data
 ValuesDf <- data.frame(Re = Re(Values), Im = Im(Values))
@@ -284,7 +347,21 @@ ggplot(ValuesDf, aes(x = Re, y = Im)) +
   labs(x = "Real Part", y = "Imaginary Part") +
   ggtitle("Eigen values on complex space") +
   theme_minimal()
+ 
+print(paste0("The maximum real part of eigen value is : ", max(ValuesDf$Re)))
+```
 
+#### A proxy of stability
+
+One estimate of stability, inspired by @neutel2002stability and @neutel2007reconciling, is to measure the minimum self-regulation (i.e. the value on the diagonal of the interaction matrix) required for the largest Real value of the matrix eigenvalues to be negative. **This is only a proxy for stability** based on the interaction matrix, since the true *Jacobian* matrix of the network would consist in applying the species densities to the interaction matrix. This method therefore amounts to measuring the minimum self-regulation for the network to be stable in the particular configuration where *all species have the same equilibrium density.*
+
+**This proxy can be used to compare networks or to assess the impact of adding or removing a species from a network on its stability.**
+
+```{r}
+source("StabilityAlgorithm.R")
+# debug(StabilityAlgorithm)
+Value <- StabilityAlgorithm(MyFoodWeb, SelfRegInit = 0.1, Threshold = 10^-4)
+print(paste0("The minimum self-regulation  (with the Threshold used) that must be applied to the network for it to be stable is : ", Value))
 
 
 ```
@@ -302,8 +379,9 @@ library(deSolve)
 ## outputs : 1) temporal densities of the stable run after incremental removal of extinct species, if any, 2) the food web matrix, with rows and colums of extinct species removed, if any.
 source("FoodWebEquilibrium.R")
 
-# Self-regulation (normally -1 because of prior normalization)
-diag(MyFoodWeb) <- -1
+# Set a self-regulation value if none inferred
+# diag(MyFoodWeb) <- -1
+
 # Run
 Tmax <- 1000
 Tstep <- 0.1
@@ -333,8 +411,9 @@ Choisir une espèce à perturber et la valeur de perturbation ; simuler la dynam
 source("FoodWebPerturb.R")
 #debug(FoodWebPerturb)
 
-# Self-regulation (normally -1 because of prior normalization)
-diag(MyFoodWeb) <- -1
+# Set a self-regulation value if none inferred
+# diag(MyFoodWeb) <- -1
+
 # Run
 Tmax <- 1000
 Tstep <- 0.1

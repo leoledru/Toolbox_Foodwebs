@@ -6,6 +6,8 @@ FoodWebAnalysis <- function(MyFoodWeb, type = "n2"){
                                NetCascade = numeric(0), RatioCascades = numeric(0), IntegChain = numeric(0))
 
   I <- diag(1, nrow = nrow(MyFoodWeb))
+  D <- diag(MyFoodWeb) # extract the self-regulation (diagonal)
+  MyFoodWeb <- MyFoodWeb / -D # normalize by self-regulation --> non-dimensional interaction matrix
   DirectEffects <- MyFoodWeb + I # Extract the normalized self-regulation
   NetEffects <- solve(I - DirectEffects)
   # some metrics
@@ -58,33 +60,33 @@ FoodWebAnalysis <- function(MyFoodWeb, type = "n2"){
   ##############################################################################
   # CHANTIER #
   
-  else if (type == "basal"){
-    SecondOrderEffects <- DirectEffects%^%2
-    IdxBasal <- which(TrophLevels == 1)
-    MiddleSp <- list()
-    i <- 1
-    for (Tl in 1:MaxTroph){
-      SpPerTroph[[i]] <- which(TrophLevels == Tl)
-      i <- i + 1
-    }
-    SpPerTroph <- list.reverse(SpPerTroph) # Liste de listes d'espèces par niveau trophique, ordre décroissant
-    Temporary <- list()
-    for (Step in 1:MaxTroph-1){
-      Temporary[[Step]] <- DirectEffects[SpPerTroph[[Step+1]], SpPerTroph[[Step]]]
-    }
-    
-    for (Top in IdxMaxTroph){
-      # find middle node(s) of the chain
-      # Méthode purement descendante :
-      # Prendre 1 Top -> identifier et stocker tous les n-1 sur lequels il intervient -> pour chaque n-1 identifier et stocker les n-2 -> jusqu'à basal
-      # Il faut juste bien gérer le stockage, mais en faisant for each species à chaque niveau jusqu'au basal on attrappe toutes les chaînes
-      Temporary <- list()
-      for (Step in 1:MaxTroph-1){
-        Temporary[[Step]] <- DirectEffects[MiddleSp[[Step]], Top]
-      }
-      
-      for (Bottom in IdxBasal){
-        DirectCascade <- SecondOrderEffects[Bottom, Top] + DirectEffects[Bottom, Top] # Direct effects must be include, in case of omnivory
+  # else if (type == "basal"){
+  #   SecondOrderEffects <- DirectEffects%^%2
+  #   IdxBasal <- which(TrophLevels == 1)
+  #   MiddleSp <- list()
+  #   i <- 1
+  #   for (Tl in 1:MaxTroph){
+  #     SpPerTroph[[i]] <- which(TrophLevels == Tl)
+  #     i <- i + 1
+  #   }
+  #   SpPerTroph <- list.reverse(SpPerTroph) # Liste de listes d'espèces par niveau trophique, ordre décroissant
+  #   Temporary <- list()
+  #   for (Step in 1:MaxTroph-1){
+  #     Temporary[[Step]] <- DirectEffects[SpPerTroph[[Step+1]], SpPerTroph[[Step]]]
+  #   }
+  #   
+  #   for (Top in IdxMaxTroph){
+  #     # find middle node(s) of the chain
+  #     # Méthode purement descendante :
+  #     # Prendre 1 Top -> identifier et stocker tous les n-1 sur lequels il intervient -> pour chaque n-1 identifier et stocker les n-2 -> jusqu'à basal
+  #     # Il faut juste bien gérer le stockage, mais en faisant for each species à chaque niveau jusqu'au basal on attrappe toutes les chaînes
+  #     Temporary <- list()
+  #     for (Step in 1:MaxTroph-1){
+  #       Temporary[[Step]] <- DirectEffects[MiddleSp[[Step]], Top]
+  #     }
+  #     
+  #     for (Bottom in IdxBasal){
+  #       DirectCascade <- SecondOrderEffects[Bottom, Top] + DirectEffects[Bottom, Top] # Direct effects must be include, in case of omnivory
 #        
 #        Middle <- which(DirectEffects[Top, ] > 0 & DirectEffects[Bottom, ] < 0)
 #        Middle <- Middle[Middle %in% which(TrophLevels == (MaxTroph - 1))] # prevent false trophic chain because of intraguild predation
@@ -113,9 +115,6 @@ FoodWebAnalysis <- function(MyFoodWeb, type = "n2"){
 # CHANTIER #
 #############################################################################
        
-  
-  
-  
   colnames(FoodWebMetrics) <- c("Top", "Middle", "Bottom", "DirectCascade", "NetCascade", "RatioCascades", "IntegChain")
   Outputs <- list("Collectivity" = Collectivity, "Connectance" = Connectance, "MeanOmnivory" = OmnivoryMean,
                   "FoodWebMetrics" = FoodWebMetrics)
