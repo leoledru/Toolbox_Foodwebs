@@ -10,6 +10,7 @@ FoodWebGraph <- function(MyFoodWeb, IdxFocusSpecies = NULL){
   Flow[is.na(Flow)] <- 0
   TrophAndOmni <- TrophInd(Flow)
   TrophLevels <- round(TrophAndOmni$TL)
+  yCoord <- TrophAndOmni$TL
   
   # Create the graphic, emphasizes the selected chain, or species
   MatrixForGraph <- DirectEffects
@@ -39,7 +40,8 @@ FoodWebGraph <- function(MyFoodWeb, IdxFocusSpecies = NULL){
   x <- sample(xSample)
   
   # y position des noeuds (defini par le niveau trophique)
-  y <- TrophLevels
+  y <- yCoord # real troph levels
+  # y <- TrophLevels # round troph levels
   Node_list <- data.frame(Nodes, x, y)
   
   # Créer le graphique à partir des arêtes et des positions x et y

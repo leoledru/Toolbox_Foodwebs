@@ -5,7 +5,7 @@ date: "`r Sys.Date()`"
 output:
   html_document: default
   pdf_document: default
-bibliography: references.bib
+# bibliography: references.bib
 params:
   lang: fr
 ---
@@ -54,7 +54,8 @@ Ce document RMarkdown est dédié à l'analyse de réseaux trophiques, en partic
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-setwd("~/Documents/Post_Doc_CARRTEL/R/Toolbox")
+# setwd("~/Documents/Post_Doc_CARRTEL/R/Toolbox")
+setwd("~/Documents/Post_Doc_CARRTEL-main/Toolbox_Foodwebs-main/")
 library(rmarkdown)
 library(shiny)
 ```
@@ -63,9 +64,9 @@ library(shiny)
 
 ```{r}
 # Main Code
-source("01_cv_Codes_AltitudeLakes.R")
+# source("01_cv_Codes_AltitudeLakes.R")
 # Functions used in the main code
-source("cv_Functions_AltitudeLakes.R")
+# source("cv_Functions_AltitudeLakes.R")
 
 ```
 
@@ -92,11 +93,11 @@ Le bloc de code suivant charge un réseau de test, puis la fonction ***CheckInit
 
 # Empirical test food web
 #load("MyFoodWeb.Rdata")
-load("MyFoodWebLake.Rdata")
+# load("MyFoodWebLake.Rdata")
 
 # Simulated test food web
-# load("StableFwbs_TL3.Rdata")
-# MyFoodWeb <- StableFwbs_TL3[[5097]][["A"]]
+load("StableFwbs_TL3.Rdata")
+MyFoodWeb <- StableFwbs_TL3[[5097]][["A"]]
 
 CheckInit <- function(MyFoodWeb){
   if (!is.matrix(MyFoodWeb)){
@@ -171,9 +172,7 @@ Cette section calcule plusieurs proxies sur le réseau et stocke l'ensemble des 
 
     </div>
 
-**NB** : L'identification des chaînes trophiques se fait ainsi : 1) calcul du niveau trophique de chaque espèce, 2) identification du niveau trophique maximum (doit valoir au moins 3) et des espèces ayant ce niveau (les *Top*), 3) identification des espèces ayant un niveau trophique de deux crans inférieur au niveau maximum (les *Bottom*), 4) identification des espèces intermédiaire reliant les *Top* et les *Bottom* (les *Middle*). Donc cette analyse considère une chaîne trophique comme partant du sommet du réseau jusqu'au niveau n-2. Dans le cas où un réseau a un niveau trophique maximum supérieur à 3 les chaînes trophiques ne descendront pas jusqu'aux espèces basales.
-
-Analyse de MyFoodWeb afin de référencer toutes les chaînes trophiques (TL max 3 ou 4, from top to n-2 et top to basal) en notant idx de prédateurs, consos inters et ressources. Mesure d'une cascade n-step ou non sur ces chaînes (si l'omnivorie prive la cascade n-step). Mesure omnivorie globale du réseau ainsi que collectivité, connectance.
+**NB** : L'identification des chaînes trophiques se fait ainsi : 1) calcul du niveau trophique de chaque espèce, 2) identification du niveau trophique maximum (doit valoir au moins 3) et des espèces ayant ce niveau (les *Top*), 3) identification des espèces ayant un niveau trophique de deux crans inférieurs au niveau maximum (les *Bottom*), 4) identification des espèces intermédiaires reliant les *Top* et les *Bottom* (les *Middle*). Donc cette analyse considère une chaîne trophique comme partant du sommet du réseau jusqu'au niveau n-2. Dans le cas où un réseau a un niveau trophique maximum supérieur à 3 les chaînes trophiques ne descendront pas jusqu'aux espèces basales.
 
 ```{r message=FALSE}
 library(NetIndices) # to compute trophic levels and omnivory
@@ -191,6 +190,8 @@ head(FoodWebMetrics)
 ```
 
 ## <a name="listing_indirect_section">Qui est relié avec qui, pour chaque ordre jusqu'à l'ordre maximal choisi.</a>
+
+Les effets indirects peuvent s'étendre dans le réseau potentiellement jusqu'à de grands ordres jusqu'à connecter l'ensemble des espèces. Cette section calcule pour chaque espèce avec laquelle elle est connectée pour chaque ordre jusqu'à un ordre maximal choisi. De plus, donne également pour chacune *l'ordre limite* à partir duquel l'espèce a interragit avec toutes les autres en considérant les ordres cumulés.
 
 ```{r}
 
@@ -236,7 +237,7 @@ head(WhoWithWho)
 
 ## <a name="visualization_section">Visualisation du réseau</a> {data-link="<a name=\"visualization_section\">Identification et visualisation des chaînes trophiques</a>"}
 
-```{r message=FALSE}
+```{r message=FALSE, warning=FALSE}
 library(igraph) # to show food web as a graph
 library(RColorBrewer)
 
@@ -251,7 +252,7 @@ width <- 8  # Ajustez la largeur selon vos besoins
 height <- 6  # Ajustez la hauteur selon vos besoins
 options(repr.plot.width = width, repr.plot.height = height)
 
-scale <- 1 # to adjust edges width
+scale <- 2 # to adjust edges width
 plot(Graph, vertex.size = 8, 
     edge.width = as.numeric(E(Graph)$weight)*scale,
     edge.curved = 0.5, edge.color = E(Graph)$col)
@@ -300,7 +301,11 @@ text(x = max(par("usr")[1], par("usr")[2]) - 0.5,
              length.out = length(Names)),
      labels = paste(seq_along(Names), Names, sep = ". "), pos = 4, col = "black", cex = 1)
 # Warning : si plusieurs chaînes avec inversion ont un lien en commun une couleur va se superposer à l'autre
-print(Outputs[["InvertedChains"]])
+if (is.null(Outputs[["InvertedChains"]])){
+  print("Aucune chaîne avec inversion de cascade")
+}
+  
+# print(Outputs[["InvertedChains"]])
 ```
 
 ## Visualisation du réseau dans l'espace des valeurs propres
