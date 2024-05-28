@@ -449,7 +449,8 @@ Tstep <- 0.1
 GrowthRate <- 0.1
 DeathRate <- 0.01
 Perturb <- 0.1
-Dynamics <- FoodWebPerturb(MyFoodWeb, Tmax, Tstep, GrowthRate, DeathRate, 1, Perturb, type = "Positive")
+IdxPerturb <- 1 # Index of the species to perturb (or vector of indices for multiple species)
+Dynamics <- FoodWebPerturb(MyFoodWeb, Tmax, Tstep, GrowthRate, DeathRate, IdxPerturb, Perturb, type = "Positive")
 
 # Version with colors = each species
 DynamicsPlot <- ggplot(Dynamics) +
