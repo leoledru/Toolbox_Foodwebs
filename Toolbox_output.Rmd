@@ -5,7 +5,7 @@ date: "`r Sys.Date()`"
 output:
   html_document: default
   pdf_document: default
-# bibliography: references.bib
+bibliography: references.bib
 params:
   lang: fr
 ---
@@ -19,8 +19,6 @@ Ce document RMarkdown est dédié à l'analyse de réseaux trophiques, en partic
     0.  Inférence de réseaux trophiques à partir de données (abondances, caractéristiques biologiques...) : Vagnon et al. 2021 (Ecosphere)
 
     </div>
-
-<!-- -->
 
 -   <div>
 
@@ -54,10 +52,20 @@ Ce document RMarkdown est dédié à l'analyse de réseaux trophiques, en partic
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-# setwd("~/Documents/Post_Doc_CARRTEL/R/Toolbox")
-setwd("~/Documents/Post_Doc_CARRTEL-main/Toolbox_Foodwebs-main/")
+setwd("~/Documents/Post_Doc_CARRTEL/R/Toolbox")
+#setwd("~/Documents/Post_Doc_CARRTEL-main/Toolbox_Foodwebs-main/")
 library(rmarkdown)
 library(shiny)
+library(deSolve)
+library(NetIndices) # to compute trophic levels and omnivory
+library(sparsevar) # for spectralRadius function
+library(expm) # for %^% operator
+library(purrr) # is_empty function
+library(rlist) # for list.reverse()
+library(igraph) # to show food web as a graph
+library(RColorBrewer)
+library(scales)
+library(ggplot2)
 ```
 
 ## <a name="foodweb_inference">Inference of food web from data (Vagnon et al. 2021)</a>
@@ -82,7 +90,7 @@ La première étape nécessaire est le chargement d'un réseau trophique sous la
 
 -   Les espèces en lignes et en colonnes doivent être rangées dans le même ordre de sorte que la diagonale de la matrice correspond à la self-regulation, c'est-à-dire l'effet direct d'une espèce sur elle-même. Tandis que tous les autres éléments $a_ij$ de la matrice correspondent à l'effet de l'espèce $j$ (en colonne) sur l'espèce $i$ (en ligne).
 
--   Les éléments de la diagonale correspondent à la self-regulation : s'ils ont été inférés ils doivent bien être $<0$ ; sinon ils sont paramétrés à $-1$ comme cela la normalisation par la self-regulation permettant d'obtenir la matrice adimensionnelle pour le calcul des effets indirects [@zelnik2022collectively] ne changera pas les valeurs d'interactions inférées.
+-   Les éléments de la diagonale correspondent à la self-regulation : s'ils ont été inférés ils doivent bien être $<0$ ; sinon ils sont paramétrés à $-1$ comme cela la normalisation par la self-regulation permettant d'obtenir la matrice adimensionnelle pour le calcul des effets indirects [@zelnik2024] ne changera pas les valeurs d'interactions inférées.
 
 -   La matrice doit représenter un réseau purement trophique, donc chaque valeur négative doit avoir une symétrique positive (néanmoins la valeur positive peut être différente, typiquement plus faible à cause d'un coefficient de conversion).
 
@@ -92,8 +100,11 @@ Le bloc de code suivant charge un réseau de test, puis la fonction ***CheckInit
 # Load your food web
 
 # Empirical test food web
-#load("MyFoodWeb.Rdata")
+# load("MyFoodWeb.Rdata")
 # load("MyFoodWebLake.Rdata")
+# load("LakesDirectSalmo.RData")
+# MyFoodWeb <- LakesDirectSalmo[[1]]
+# diag(MyFoodWeb) <- -1
 
 # Simulated test food web
 load("StableFwbs_TL3.Rdata")
@@ -140,19 +151,22 @@ CheckInit <- function(MyFoodWeb){
 #MyFoodWeb <- matrix(c(1,2,-3,1), nrow = 2, ncol = 2)
 #debug(CheckInit)
 MyFoodWeb <- CheckInit(MyFoodWeb)
+if (is.null(rownames(MyFoodWeb))){
+  rownames(MyFoodWeb) <- 1:dim(MyFoodWeb)[[1]]
+}
 ```
 
 ## <a name="analysis_section">Analyse du réseau : collectivité, connectance, omnivorie, cascades trophiques, intégration des chaînes trophiques</a>
 
 Cette section calcule plusieurs proxies sur le réseau et stocke l'ensemble des résultats dans une liste de listes nommée *FoodWebMetrics*. Cette liste contient :
 
--   La collectivité du réseau (Zelnik et al. 2024)
+-   La collectivité du réseau [@zelnik2024]
 
 -   La connectance du réseau
 
 -   L'omnivorie moyen du réseau (la moyenne de l'omnivorie de chaque espèce)
 
--   Une sous-liste comprenant pour chaque chaîne trophique du réseau :
+-   Une sous-liste avec des mesures caractérisant le processus de cascade trophique exprimé par chaque chaîne trophique du réseau [@ledru2024] :
 
 -   <div>
 
@@ -164,22 +178,17 @@ Cette section calcule plusieurs proxies sur le réseau et stocke l'ensemble des 
 
     -   La valeur de la cascade trophique à court terme, c'est-à-dire l'effet indirect uniquement descendant du *Top* au *Bottom*
 
-    -   La valeur de la cascade trophique à long terme, c'est-à-dire l'effet net du *Top* au *Bottom*
+    -   La valeur de la cascade trophique à long terme, c'est-à-dire l'effet net à long-terme du *Top* au *Bottom*
 
-    -   Le ratio cascade trophique long terme / court terme montrant s'il y a une divergence entre les deux cascades (Ledru et al. 2024)
+    -   Le ratio cascade trophique long terme / court terme montrant s'il y a une divergence entre les deux cascades
 
-    -   La valeur d'intégration de la chaîne dans le réseau, qui correspond au ratio entre les interactions au sein de la chaîne et les interactions entre la chaîne et le reste du réseau, un proxy de la collectivité expériencée par la chaîne trophique (Ledru et al. 2024)
+    -   La valeur d'intégration de la chaîne dans le réseau, qui correspond au ratio entre les interactions au sein de la chaîne et les interactions entre la chaîne et le reste du réseau, un proxy de la collectivité expériencée par la chaîne trophique
 
     </div>
 
-**NB** : L'identification des chaînes trophiques se fait ainsi : 1) calcul du niveau trophique de chaque espèce, 2) identification du niveau trophique maximum (doit valoir au moins 3) et des espèces ayant ce niveau (les *Top*), 3) identification des espèces ayant un niveau trophique de deux crans inférieurs au niveau maximum (les *Bottom*), 4) identification des espèces intermédiaires reliant les *Top* et les *Bottom* (les *Middle*). Donc cette analyse considère une chaîne trophique comme partant du sommet du réseau jusqu'au niveau n-2. Dans le cas où un réseau a un niveau trophique maximum supérieur à 3 les chaînes trophiques ne descendront pas jusqu'aux espèces basales.
+**NB** : L'identification des **chaînes trophiques** se fait ainsi : 1) calcul du niveau trophique de chaque espèce, 2) identification du niveau trophique maximum (doit valoir au moins 3) et des espèces ayant ce niveau (les *Top*), 3) identification des espèces ayant un niveau trophique de deux crans inférieurs au niveau maximum (les *Bottom*), 4) identification des espèces intermédiaires reliant les *Top* et les *Bottom* (les *Middle*). Donc cette analyse considère une chaîne trophique comme partant du sommet du réseau jusqu'au niveau top-2. Dans le cas où un réseau a un niveau trophique maximum supérieur à 3 les chaînes trophiques ne descendront pas jusqu'aux espèces basales.
 
-```{r message=FALSE}
-library(NetIndices) # to compute trophic levels and omnivory
-library(sparsevar) # for spectralRadius function
-library(expm) # for %^% operator
-library(purrr) # is_empty function
-library(rlist) # for list.reverse()
+```{r message=FALSE, warning=FALSE}
 
 # Analysis fo the food web
 ## outputs : a list with some food web metrics (collectivity, connectance, mean omnivory) and a dataframe listing all trophic chains within the food web (indices of species at the top, middle, and bottom of each chain), with their values of n-step cascade, net cascade, the ratio between the two cascades, and a measure of integration of the chain within the food web (interactions within the chain versus between the chain and the food web).
@@ -237,9 +246,13 @@ head(WhoWithWho)
 
 ## <a name="visualization_section">Visualisation du réseau</a> {data-link="<a name=\"visualization_section\">Identification et visualisation des chaînes trophiques</a>"}
 
+Une visualisation graphique du réseau peut permettre une compréhension intuitive des relations en jeu beaucoup plus facile qu'à partir de la matrice d'interactions brutes. Cette section permet cette visualisation sous forme de noeuds (les espèces) connectées par des liens (les interactions).
+
+Bien sûr pour un réseau trophique chaque lien est bidirectionnel, signifiant un effet positif de la proie sur le prédateur dans un sens et un effet négatif du prédateur sur la proie dans l'autre sens, mais cette subtilité n'est pas representée et chaque couple proie-prédateur est simplement relié par un lien. En revanche, l'épaisseur du lien indique la force de l'interaction.
+
+L'utilisateur peut choisir une espèce d'intérêt par son indice dans la matrice d'interaction, son numéro de ligne, via le paramètre *IdxFocusSpecies*. Dans ce cas les liens directs de cette espèce apparaitront en rouges, ainsi que les noeuds connectés, et en bleu seront les liens d'ordre deux ainsi que les espèces connectées. Cela permet d'avoir facilement une idée du rôle que peut jouer l'espèce d'intérêt dans le réseau via ses interactions avec les autres espèces. Pour savoir avec qui l'espèce d'intérêt interagit pour des ordres d'effets indirects plus grand se référer à la section précédente.
+
 ```{r message=FALSE, warning=FALSE}
-library(igraph) # to show food web as a graph
-library(RColorBrewer)
 
 # Visualization
 ## outputs : a graph representing the food web, nodes are species and black curves are trophic links. If a focus species is chosen (IdxFocusSpecies = "the numeric index of the chosen species"), its direct links will show in red and its second-order links in blue.
@@ -252,8 +265,8 @@ width <- 8  # Ajustez la largeur selon vos besoins
 height <- 6  # Ajustez la hauteur selon vos besoins
 options(repr.plot.width = width, repr.plot.height = height)
 
-scale <- 2 # to adjust edges width
-plot(Graph, vertex.size = 8, 
+scale <- 1 # to adjust edges width
+plot(Graph, vertex.size = 8, vertex.color = V(Graph)$col,
     edge.width = as.numeric(E(Graph)$weight)*scale,
     edge.curved = 0.5, edge.color = E(Graph)$col)
 
@@ -272,10 +285,18 @@ text(x = max(par("usr")[1], par("usr")[2]) - 0.5,
 
 ## <a name="inverted_cascade_section">Inverted chain</a>
 
+Le concept de cascade trophique considère que l'effet indirect d'un prédateur d'une chaîne trophique sur l'espèce deux niveaux trophiques plus bas dans la chaîne trophique est positif, via son effet direct négatif sur le niveau intermédiaire. Plus généralement, partant d'un prédateur, son effet devrait être négatif sur les niveaux trophiques inférieurs impair et positif sur les niveaux séparés d'une distance paire. Par exemple d'un prédateur de niveau trophique 3 à une ressource de niveau trophique 1 la distance étant de 2 liens l'effet devrait être positif.
+
+Cependant, Ledru et al. 2024 montre que dans des réseaux écologiques complexes il n'est plus possible de considérer les chaînes trophiques indépendamment les unes des autres. En effet, des effets indirects multiples et potentiellement d'ordres importants peuvent perturber la cascade trophique strictement descendante, de telle sorte que la cascade trophique à long-terme, mesurée par les effets nets entre les espèces, peut être inversée par rapport à la cascade trophique classique (à court-terme).
+
+La section de code suivante identifie les chaînes trophiques susceptibles d'exprimer une cascade trophique inversée et les mets en lumière.
+
+Pour voir précisément la *valeur* de chaque cascade trophique se référer à la liste **FoodWebMetrics** calculée dans la section [Analyse du réseau](#analysis_section).
+
 ```{r message=FALSE}
+
 # Visualization of Inverted chain(s)
 ## outputs : a graph representing the food web, with links of inverted chain in colors (if any), all others links are black.
-library("scales")
 source("InvertedChainGraph.R")
 # debug(InvertedChainGraph)
 Outputs <- InvertedChainGraph(MyFoodWeb, FoodWebMetrics)
@@ -285,7 +306,7 @@ width <- 8  # Ajustez la largeur selon vos besoins
 height <- 6  # Ajustez la hauteur selon vos besoins
 options(repr.plot.width = width, repr.plot.height = height)
 
-scale <- 1 # to adjust edges width
+scale <- 0.5 # to adjust edges width
 plot(Graph, vertex.size = 8, 
     edge.width = as.numeric(E(Graph)$weight)*scale,
     edge.curved = 0.5, edge.color = E(Graph)$col)
@@ -310,12 +331,7 @@ if (is.null(Outputs[["InvertedChains"]])){
 
 ## Visualisation du réseau dans l'espace des valeurs propres
 
-Calculer valeurs propres (avec self-reg normalisée extraite, donc diag = 0) et ploter l'espace des valeurs propres, faire apparaître la collectivité avec le cercle de rayon phi et faire apparaître la limite de stabilité sur l'axe de la partie réelle.
-
-Également un algo pour estimer la self-reg minimale à appliquer pour "stabilité" ?
-
 ```{r message=FALSE, warning=FALSE}
-library(ggplot2)
 
 # Compute eigen values, their barycentre and the collectivity
 I <- diag(1, nrow = nrow(MyFoodWeb))
@@ -363,6 +379,7 @@ One estimate of stability, inspired by @neutel2002stability and @neutel2007recon
 **This proxy can be used to compare networks or to assess the impact of adding or removing a species from a network on its stability.**
 
 ```{r}
+
 source("StabilityAlgorithm.R")
 # debug(StabilityAlgorithm)
 Value <- StabilityAlgorithm(MyFoodWeb, SelfRegInit = 0.1, Threshold = 10^-4)
@@ -373,25 +390,31 @@ print(paste0("The minimum self-regulation  (with the Threshold used) that must b
 
 ## Dynamique du réseau
 
-### stabilité du réseau
+Cette section applique un modèle de Lotka-Volterra Généralisé (GLV) sur la matrice d'interactions du réseau pour simuler sa dynamique.
 
-Commence par tester si le réseau est stable : simulations successives en retirant les espèces éteintes à chaque fois tant qu'il y en a.
+### Stabilité du réseau
+
+Le GLV n'a que deux paramètres : le GrowthRate des espèces basales et le DeathRate des espèces non-basales.
+
+La section de code ci-dessous teste si en fonction des paramètres donnés en entrée le système atteint effectivement un équilibre stable sans aucune extinction. S'il y a une ou plusieurs extinctions les espèces sont retirées et la simulation recommence, cela jusqu'à atteindre un système stable.
+
+Cela permet dans le cas d'un réseau simulé d'obtenir une configuration stable. Dans le cas d'un réseau inféré empiriquement, et donc qu'on suggère stable puisque observé, l'utilisateur peut trouver les paramètres adéquates pour avoir un système stable sans aucune extinction ni retrait d'espèce. Il pourra ensuite utiliser ces paramètres pour la section suivante.
 
 ```{r, message=FALSE, results='asis'}
-library(deSolve)
 
 # Apply a Generalized Lotka-Volterra on the food web until a stable configuration (by removing extinct species) 
 ## outputs : 1) temporal densities of the stable run after incremental removal of extinct species, if any, 2) the food web matrix, with rows and colums of extinct species removed, if any.
 source("FoodWebEquilibrium.R")
 
-# Set a self-regulation value if none inferred
+# Set a new self-regulation if desired
 # diag(MyFoodWeb) <- -1
 
 # Run
 Tmax <- 1000
 Tstep <- 0.1
-GrowthRate <- 0.1
+GrowthRate <- 0.15
 DeathRate <- 0.01
+# debug(FoodWebEquilibrium)
 Outputs <- FoodWebEquilibrium(MyFoodWeb, Tmax, Tstep, GrowthRate, DeathRate)
 # Visualization
 Dynamics <- Outputs[["Dynamics"]]
@@ -408,11 +431,12 @@ DynamicsPlot <- ggplot(Dynamics) +
 DynamicsPlot # show plot
 ```
 
-### perturbation du réseau
+### Perturbation du réseau
 
 Choisir une espèce à perturber et la valeur de perturbation ; simuler la dynamique et ploter ; différencier dans le plot l'espèce perturbé, ainsi que les espèces directement connectées à elles selon leur niveau troph, et les autres espèces en noir.
 
 ```{r}
+
 source("FoodWebPerturb.R")
 #debug(FoodWebPerturb)
 
@@ -424,7 +448,7 @@ Tmax <- 1000
 Tstep <- 0.1
 GrowthRate <- 0.1
 DeathRate <- 0.01
-Perturb <- 0.05
+Perturb <- 0.1
 Dynamics <- FoodWebPerturb(MyFoodWeb, Tmax, Tstep, GrowthRate, DeathRate, 1, Perturb, type = "Positive")
 
 # Version with colors = each species

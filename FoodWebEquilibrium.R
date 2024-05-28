@@ -36,6 +36,7 @@ FoodWebEquilibrium <- function(MyFoodWeb, Tmax, Tstep, GrowthRate, DeathRate){
   # Remove extinct species
   FinalDensities <- ResultDf[nrow(ResultDf),]
   IdxExtinct <- which(FinalDensities < 10^-3)
+  print(IdxExtinct)
   MyFoodWeb <- MyFoodWeb[FinalDensities > 10^-3, FinalDensities > 10^-3] # remove extinct species
   
   # Check food web validity
@@ -82,6 +83,7 @@ FoodWebEquilibrium <- function(MyFoodWeb, Tmax, Tstep, GrowthRate, DeathRate){
     FinalDensities <- ResultDf[nrow(ResultDf),]
     MyFoodWeb <- MyFoodWeb[FinalDensities > 10^-3, FinalDensities > 10^-3]
     IdxExtinct <- which(FinalDensities < 10^-3)
+    print(IdxExtinct)
     NbrOfExtinct <- NbrOfExtinct + length(IdxExtinct)
     # Check food web validity
     if (is_empty(MyFoodWeb)){

@@ -58,7 +58,7 @@ FoodWebAnalysis <- function(MyFoodWeb, type = "n2"){
   
   
   ##############################################################################
-  # CHANTIER #
+  # CHANTIER Faire jusqu'à basal #
   
   # else if (type == "basal"){
   #   SecondOrderEffects <- DirectEffects%^%2

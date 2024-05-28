@@ -27,7 +27,8 @@ InvertedChainGraph <- function(MyFoodWeb, FoodWebMetrics){
   # changer la couleur pour ces liens là
   IdxInvertedChain <- which(FoodWeb$RatioCascades < 0)
   if (!is_empty(IdxInvertedChain)){
-    ColPal <- brewer.pal(max(length(IdxInvertedChain), 3), "Set1")
+    Palette <- colorRampPalette(brewer.pal(9, "Spectral"))
+    ColPal <- Palette(max(length(IdxInvertedChain), 3))
     Col <- 0
     Tops <- FoodWeb$Top[IdxInvertedChain]
     Middles <- FoodWeb$Middle[IdxInvertedChain]
