@@ -36,3 +36,12 @@
 
 - Possibilité de choisir un noeud (ou plusieurs), appliquer une perturbation positive ou négative (scalée pour assurer non-extinction) et voir réponse du système
 - Plot de la réponse dynamique du système
+
+
+
+
+
+# To-do
+
+- igraph ajout paramètre pour layout : par niveau troph ou bien cercle ou ...
+- dynamique de perturb ajouter un print qui donne les espèces qui s'éteignent s'il y en a
