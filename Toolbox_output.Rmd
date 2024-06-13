@@ -49,7 +49,13 @@ This RMarkdown document is dedicated to the analysis of food webs, particularly 
     5.  [Visualization of trophic cascades with inversion](#inverted_cascade_section)
 
     </div>
+    
+-   <div>
 
+    6.  [Stability and dynamics of food web](#stability_n_dynamics_section)
+
+    </div>
+        
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60), tidy = TRUE)
@@ -330,7 +336,9 @@ if (is.null(Outputs[["InvertedChains"]])){
 # print(Outputs[["InvertedChains"]])
 ```
 
-## Visualisation du réseau dans l'espace des valeurs propres
+## \<a name="stability_n_dynamics_section">Stability and dynamics of food web</a>
+
+### Visualizing the network in eigenvalue space
 
 ```{r message=FALSE, warning=FALSE}
 
@@ -373,38 +381,32 @@ ggplot(ValuesDf, aes(x = Re, y = Im)) +
 print(paste0("The maximum real part of eigen value is : ", max(ValuesDf$Re)))
 ```
 
-#### A proxy of stability
+### A proxy of stability
 
-One estimate of stability, inspired by @neutel2002stability and @neutel2007reconciling, is to measure the minimum self-regulation (i.e. the value on the diagonal of the interaction matrix) required for the largest Real value of the matrix eigenvalues to be negative. **This is only a proxy for stability** based on the interaction matrix, since the true *Jacobian* matrix of the network would consist in applying the species densities to the interaction matrix. This method therefore amounts to measuring the minimum self-regulation for the network to be stable in the particular configuration where *all species have the same equilibrium density.*
+One estimate of stability, inspired by @neutel2002stability and @neutel2007reconciling, is to measure the minimum self-regulation (i.e. the value on the diagonal of the interaction matrix) required for the largest Real value of the matrix eigenvalues to be negative [@sauve2016plants]. **This is only a proxy for stability** based on the interaction matrix, since the true *Jacobian* matrix of the network would consist in applying the species densities to the interaction matrix. This method therefore amounts to measuring the minimum self-regulation for the network to be stable in the particular configuration where *all species have the same equilibrium density.*
 
 **This proxy can be used to compare networks or to assess the impact of adding or removing a species from a network on its stability.**
 
 ```{r}
-
 source("StabilityAlgorithm.R")
 # debug(StabilityAlgorithm)
 Value <- StabilityAlgorithm(MyFoodWeb, SelfRegInit = 0.1, Threshold = 10^-4)
 cat("The minimum self-regulation (with the Threshold used) that must be applied to the","\n", "network for it to be stable is : ", Value)
-
-
 ```
 
-## Dynamique du réseau
+### Food web dynamics
 
-Cette section applique un modèle de Lotka-Volterra Généralisé (GLV) sur la matrice d'interactions du réseau pour simuler sa dynamique.
+Food web dynamics can be simulated in a fairly general way using the Generalized Lotka-Volterra (GLV) model. The dynamics of each species depend on its intrinsic growth rate (positive or negative, depending on whether it is autotrophic or heterotrophic) and the sum of interactions with other species (the interaction matrix). 
+The GLV therefore has just one parameter, the growth rate, which we break down into two: the GrowthRate of basal species and the DeathRate of non-basal species.
 
-### Stabilité du réseau
+#### Simulation to equilibrium
 
-Le GLV n'a que deux paramètres : le GrowthRate des espèces basales et le DeathRate des espèces non-basales.
-
-La section de code ci-dessous teste si en fonction des paramètres donnés en entrée le système atteint effectivement un équilibre stable sans aucune extinction. S'il y a une ou plusieurs extinctions les espèces sont retirées et la simulation recommence, cela jusqu'à atteindre un système stable.
-
-Cela permet dans le cas d'un réseau simulé d'obtenir une configuration stable. Dans le cas d'un réseau inféré empiriquement, et donc qu'on suggère stable puisque observé, l'utilisateur peut trouver les paramètres adéquates pour avoir un système stable sans aucune extinction ni retrait d'espèce. Il pourra ensuite utiliser ces paramètres pour la section suivante.
+The code section below tests whether, given the input parameters (growth rate and death rate), the system actually reaches a stable equilibrium without any extinction. If there are one or more extinctions, the species are removed and the simulation starts again, until a stable system is reached.
+In the case of a simulated food web, this results in a stable configuration. In the case of an empirically inferred food web, which is suggested to be stable because it has been observed, the user can find the appropriate parameters to obtain a stable system without any extinction or species removal. These parameters can then be used in the next section.
 
 ```{r, message=FALSE, results='asis'}
 
-# Apply a Generalized Lotka-Volterra on the food web until a stable configuration (by removing extinct species) 
-## outputs : 1) temporal densities of the stable run after incremental removal of extinct species, if any, 2) the food web matrix, with rows and colums of extinct species removed, if any.
+# outputs : 1) temporal densities of the stable run after incremental removal of extinct species, if any, 2) the food web matrix, with rows and colums of extinct species removed, if any.
 source("FoodWebEquilibrium.R")
 
 # Set a new self-regulation if desired
@@ -413,17 +415,20 @@ source("FoodWebEquilibrium.R")
 # Run
 Tmax <- 1000
 Tstep <- 0.1
-GrowthRate <- 0.15
-DeathRate <- 0.01
+GrowthRate <- 0.15 # could be a vector if you want different growth rate for the different basal species (if so be careful to have a vector of the right length)
+DeathRate <- 0.01 # could be a vector if you want different death rate for the different non-basal species (if so be careful to have a vector of the right length)
+
 # debug(FoodWebEquilibrium)
 Outputs <- FoodWebEquilibrium(MyFoodWeb, Tmax, Tstep, GrowthRate, DeathRate)
+
 # Visualization
 Dynamics <- Outputs[["Dynamics"]]
 if (max(Dynamics$TrophLevel) == 3){
   colors <- c("darkgreen", "blue", "red")
 }else{ # maximum trophic level = 4
   colors <- c("darkgreen", "blue", "red", "black")
-}
+} # you could create another vector of color if there is more trophic levels
+
 DynamicsPlot <- ggplot(Dynamics) +
                 geom_line(aes(x = Time, y = Density, color = factor(TrophLevel), group = factor(IdxSpecies)), linewidth = 1) +
                 labs(title = paste0("Number of extinct species before stable configuration : ", Outputs[["NbrOfExtinct"]]), x = "Time", y = "Density", color = "Trophic levels") +
@@ -432,9 +437,10 @@ DynamicsPlot <- ggplot(Dynamics) +
 DynamicsPlot # show plot
 ```
 
-### Perturbation du réseau
+#### Food web disturbance
 
-Choisir une espèce à perturber et la valeur de perturbation ; simuler la dynamique et ploter ; différencier dans le plot l'espèce perturbé, ainsi que les espèces directement connectées à elles selon leur niveau troph, et les autres espèces en noir.
+Once we have the configuration of the system at equilibrium (the species that persist and their density at equilibrium), we may want to see how the food web responds to the disturbance of one or more species. This allows us, for example, to directly visualize the dynamics of a cascade inversion potentially identified in the dedicated section.
+This section of the code consists in choosing one or more species to be disturbed, i.e. whose growth/mortality rate will be modified, either positively or negatively. System dynamics in response to this disturbance are then simulated and plotted.
 
 ```{r}
 
