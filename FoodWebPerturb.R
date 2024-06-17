@@ -1,4 +1,16 @@
 FoodWebPerturb <- function(MyFoodWeb, Tmax, Tstep, GrowthRate, DeathRate, IdxPerturb, Perturb, type){
+  #' @title Dynamics resposne of food web perturbation
+  #' @description
+    #' Simulates a stable system until equilibrium, then perturb the chosen species (one or several) and simulates the system dynamics response
+  #' @param MyFoodWeb is the interaction square matrix of the *stable* food web of interest
+  #' @param Tmax is the maximum duration of the simulation
+  #' @param Tstep is the time step
+  #' @param GrowthRate is the growth rate of basal species, a scalar means the same growth rate for each species, otherwise it's a vector of the same length than the number of basal species
+  #' @param DeathRate is the death rate of non-basal species, a scalar means the same growth rate for each species, otherwise it's a vector of the same length than the number of non-basal species
+  #' @param IdxPerturb is a scalar or a vector of index or indices of perturbed species
+  #' @param Perturb is the magnitude of the perturbation
+  #' @param type defines the perturbation, "positive" or "negative"
+  #' @returns a dataframe with the temporal dynamics of each species
   
   LotkaVolterraGeneralized <- function(t, N, parameters){
     A <- parameters$A

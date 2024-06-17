@@ -1,5 +1,16 @@
 FoodWebEquilibrium <- function(MyFoodWeb, Tmax, Tstep, GrowthRate, DeathRate){
-  
+  #' @title Food web dynamics to equilibrium
+  #' @description
+    #' Simulates food web dynamics with a Generalized-Lokta-Volterra model to find its stable configuration.
+    #' Remove extinct species until find an equilibrium with only persistant species.
+  #' @param MyFoodWeb is the interaction square matrix of the food web of interest
+  #' @param Tmax is the maximum duration of the simulation
+  #' @param Tstep is the time step
+  #' @param GrowthRate is the growth rate of basal species, a scalar means the same growth rate for each species, otherwise it's a vector of the same length than the number of basal species
+  #' @param DeathRate is the death rate of non-basal species, a scalar means the same growth rate for each species, otherwise it's a vector of the same length than the number of non-basal species
+  #' @returns  a list containing the interaction matrix of the stable system (same matrix as in input if no extinction), 
+  #' the temporal dynamics of each species, and the number of extinction
+
   LotkaVolterraGeneralized <- function(t, N, parameters) {
     A <- parameters$A
     r <- parameters$r

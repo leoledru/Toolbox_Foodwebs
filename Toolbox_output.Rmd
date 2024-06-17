@@ -409,7 +409,7 @@ The code section below tests whether, given the input parameters (growth rate an
 
 # outputs : 1) temporal densities of the stable run after incremental removal of extinct species, if any, 2) the food web matrix, with rows and colums of extinct species removed, if any.
 source("FoodWebEquilibrium.R")
-
+docstring(FoodWebEquilibrium)
 # Set a new self-regulation if desired
 # diag(MyFoodWeb) <- -1
 
@@ -445,6 +445,7 @@ Once we have the configuration of the system at equilibrium (the species that pe
 ```{r}
 
 source("FoodWebPerturb.R")
+docstring(FoodWebPerturb)
 #debug(FoodWebPerturb)
 
 # Set a self-regulation value if none inferred
