@@ -16,7 +16,7 @@ This RMarkdown document is dedicated to the analysis of food webs, particularly 
 
 -   <div>
 
-    0.  Inférence de réseaux trophiques à partir de données (abondances, caractéristiques biologiques...) : Vagnon et al. 2021 (Ecosphere)
+    0.  [Inference of food webs from data (abundances, biological characteristics...): Vagnon et al. 2021 (Ecosphere)](#foodweb_inference)
 
     </div>
 
@@ -49,13 +49,13 @@ This RMarkdown document is dedicated to the analysis of food webs, particularly 
     5.  [Visualization of trophic cascades with inversion](#inverted_cascade_section)
 
     </div>
-    
+
 -   <div>
 
     6.  [Stability and dynamics of food web](#stability_n_dynamics_section)
 
     </div>
-        
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60), tidy = TRUE)
@@ -75,17 +75,12 @@ library(RColorBrewer)
 library(scales)
 library(ggplot2)
 library(docstring) # allow to call the docstring of functions used in this RMarkdown as native R functions, by calling ?<functionName>
+library(roxygen2)
 ```
 
 ## <a name="foodweb_inference">Inference of food web from data (Vagnon et al. 2021)</a>
 
-```{r}
-# Main Code
-# source("01_cv_Codes_AltitudeLakes.R")
-# Functions used in the main code
-# source("cv_Functions_AltitudeLakes.R")
-
-```
+See <https://doi.org/10.1002/ecs2.3420>, in particular AppendixS4 with the associated github repository <https://github.com/chloevagnon/aNM_method>.
 
 ## <a name="loading_section">Loading food web and verifications</a>
 
@@ -111,9 +106,11 @@ The following code block loads a test food web, then the ***CheckInit*** functio
 # Empirical test food web
 # load("MyFoodWeb.Rdata")
 # load("MyFoodWebLake.Rdata")
- load("LakesDirectSalmo.RData")
- MyFoodWeb <- LakesDirectSalmo[[2]]
- diag(MyFoodWeb) <- -1
+load("LakesDirectSalmo.RData")
+MyFoodWeb <- LakesDirectSalmo[[2]]
+diag(MyFoodWeb) <- -1
+#load("StableFwbs_TL4_b.Rdata")
+#MyFoodWeb <- StableFwbs_TL4[[1]][["A"]]
 
 # Simulated test food web
 # load("StableFwbs_TL3.Rdata")
@@ -194,14 +191,17 @@ This section calculates several proxies on the network and stores all the result
 
     </div>
 
-**NB**: Trophic chains are identified as follows; 1) calculation of the trophic level of each species, 2) identification of the maximum trophic level (must be at least 3) and the species with this level (the *Top*), 3) identification of species with a trophic level two levels below the maximum level (the *Bottom*), 4) identification of intermediate species link the *Top* and *Bottom* (the *Middle*). Thus, this analysis considers a trophic chain as running from the top of the food web to the top-2 level. If a food web has a maximum trophic level greater than 3, trophic chains will not go all the way down to the basal species.
+**NB**: Trophic chains are identified as follows; 1) calculation of the trophic level of each species, 2) identification of the maximum trophic level (must be at least 3) and the species with this level (the *Top*), 3) identification of species with a trophic level two levels below the maximum level (if type="n2"), or basal species (if type="basal), (the *Bottom*), 4) identification of intermediate species link the *Top* and *Bottom* (the *Middle*).
+
+With the parameter type="n2" the analysis considers a trophic chain as running from the top of the food web to the top-2 level. If a food web has a maximum trophic level greater than 3, trophic chains will not go all the way down to the basal species.
 
 ```{r message=FALSE, warning=FALSE}
 
 # Analysis of the food web
 source("FoodWebAnalysis.R")
 #debug(FoodWebAnalysis)
-FoodWebMetrics <- FoodWebAnalysis(MyFoodWeb)
+# docstring(FoodWebAnalysis) # to see the docstring
+FoodWebMetrics <- FoodWebAnalysis(MyFoodWeb, type="n2")
 head(FoodWebMetrics)
 ```
 
@@ -219,7 +219,8 @@ I <- diag(1, nrow = nrow(MyFoodWeb))
 D <- diag(MyFoodWeb) # extract the self-regulation (diagonal)
 MyFoodWeb <- MyFoodWeb / -D # normalize by self-regulation --> non-dimensional interaction matrix
 DirectEffects <- MyFoodWeb + I # Extract the normalized self-regulation
-MaxOrder <- 5
+MaxOrder <- 5 # Order of indirect interactions maximum to compute
+
 # ComputeLinks : for each species find all non-null interactions for each order until MaxOrder
 # Also find the cumulative orderLim from which each species has interacted with all others
 ComputeLinks <- function(i, DirectEffects, MaxOrder, SpNames){
@@ -260,10 +261,10 @@ Of course, for a food web, each link is bidirectional, meaning a positive effect
 The user can select a species of interest by its index in the interaction matrix via the *IdxFocusSpecies* parameter. In this case, the species' node will appear in green, the species' direct links will appear in red, as well as connected nodes, and in blue will be second-order links and connected species. This makes it easy to get an idea of the role the species of interest can play in the food web through its interactions with other species. To find out with whom the species of interest interacts for larger orders of indirect effects refer to the previous section.
 
 ```{r message=FALSE, warning=FALSE}
-
 # Visualization
 source("FoodWebGraph.R")
 #debug(FoodWebGraph)
+docstring(FoodWebGraph) # to see the docstring
 # IdxFocusSpecies = the numeric index of the chosen species if any
 Graph <- FoodWebGraph(MyFoodWeb, IdxFocusSpecies = 1)
 
@@ -306,6 +307,7 @@ To see the precise value of each trophic cascade, refer to the *FoodWebMetrics* 
 ## outputs : a graph representing the food web, with links of inverted chain in colors (if any), all others links are black.
 source("InvertedChainGraph.R")
 # debug(InvertedChainGraph)
+docstring(InvertedChainGraph)
 Outputs <- InvertedChainGraph(MyFoodWeb, FoodWebMetrics)
 Graph <- Outputs[["Graph"]]
 par(mar = c(1, 1, 1, 1)) # adjust margins
@@ -336,7 +338,7 @@ if (is.null(Outputs[["InvertedChains"]])){
 # print(Outputs[["InvertedChains"]])
 ```
 
-## \<a name="stability_n_dynamics_section">Stability and dynamics of food web</a>
+## \<a name="stability_n_dynamics_section"\>Stability and dynamics of food web</a>
 
 ### Visualizing the network in eigenvalue space
 
@@ -389,20 +391,19 @@ One estimate of stability, inspired by @neutel2002stability and @neutel2007recon
 
 ```{r}
 source("StabilityAlgorithm.R")
-# debug(StabilityAlgorithm)
-Value <- StabilityAlgorithm(MyFoodWeb, SelfRegInit = 0.1, Threshold = 10^-4)
+#debug(StabilityAlgorithm)
+docstring(StabilityAlgorithm)
+Value <- StabilityAlgorithm(MyFoodWeb, SelfRegInit = 1, Threshold = 10^-4)
 cat("The minimum self-regulation (with the Threshold used) that must be applied to the","\n", "network for it to be stable is : ", Value)
 ```
 
 ### Food web dynamics
 
-Food web dynamics can be simulated in a fairly general way using the Generalized Lotka-Volterra (GLV) model. The dynamics of each species depend on its intrinsic growth rate (positive or negative, depending on whether it is autotrophic or heterotrophic) and the sum of interactions with other species (the interaction matrix). 
-The GLV therefore has just one parameter, the growth rate, which we break down into two: the GrowthRate of basal species and the DeathRate of non-basal species.
+Food web dynamics can be simulated in a fairly general way using the Generalized Lotka-Volterra (GLV) model. The dynamics of each species depend on its intrinsic growth rate (positive or negative, depending on whether it is autotrophic or heterotrophic) and the sum of interactions with other species (the interaction matrix). The GLV therefore has just one parameter, the growth rate, which we break down into two: the GrowthRate of basal species and the DeathRate of non-basal species.
 
 #### Simulation to equilibrium
 
-The code section below tests whether, given the input parameters (growth rate and death rate), the system actually reaches a stable equilibrium without any extinction. If there are one or more extinctions, the species are removed and the simulation starts again, until a stable system is reached.
-In the case of a simulated food web, this results in a stable configuration. In the case of an empirically inferred food web, which is suggested to be stable because it has been observed, the user can find the appropriate parameters to obtain a stable system without any extinction or species removal. These parameters can then be used in the next section.
+The code section below tests whether, given the input parameters (growth rate and death rate), the system actually reaches a stable equilibrium without any extinction. If there are one or more extinctions, the species are removed and the simulation starts again, until a stable system is reached. In the case of a simulated food web, this results in a stable configuration. In the case of an empirically inferred food web, which is suggested to be stable because it has been observed, the user can find the appropriate parameters to obtain a stable system without any extinction or species removal. These parameters can then be used in the next section.
 
 ```{r, message=FALSE, results='asis'}
 
@@ -439,8 +440,7 @@ DynamicsPlot # show plot
 
 #### Food web disturbance
 
-Once we have the configuration of the system at equilibrium (the species that persist and their density at equilibrium), we may want to see how the food web responds to the disturbance of one or more species. This allows us, for example, to directly visualize the dynamics of a cascade inversion potentially identified in the dedicated section.
-This section of the code consists in choosing one or more species to be disturbed, i.e. whose growth/mortality rate will be modified, either positively or negatively. System dynamics in response to this disturbance are then simulated and plotted.
+Once we have the configuration of the system at equilibrium (the species that persist and their density at equilibrium), we may want to see how the food web responds to the disturbance of one or more species. This allows us, for example, to directly visualize the dynamics of a cascade inversion potentially identified in the dedicated section. This section of the code consists in choosing one or more species to be disturbed, i.e. whose growth/mortality rate will be modified, either positively or negatively. System dynamics in response to this disturbance are then simulated and plotted.
 
 ```{r}
 
