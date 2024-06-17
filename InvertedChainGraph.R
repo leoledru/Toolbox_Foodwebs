@@ -1,5 +1,10 @@
 InvertedChainGraph <- function(MyFoodWeb, FoodWebMetrics){
-  
+  #' @title Trophic Cascade Inversion
+  #' @description
+    #' Identification and graphical vizualisation of trophic chains with a long-term inversion of trophic cascade
+  #' @param MyFoodWeb is the interaction square matrix of the food web of interest
+  #' @param FoodWebMetrics is the list of trophic chains returned by the function FoodWebAnalysis.R
+
   FoodWeb <- FoodWebMetrics[["FoodWebMetrics"]]
   
   # Trophic Levels for nodes' y position
