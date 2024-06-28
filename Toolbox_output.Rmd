@@ -28,7 +28,7 @@ This RMarkdown document is dedicated to the analysis of food webs, particularly 
 
 -   <div>
 
-    2.  [Foodweb analysis: identification of trophic chains, calculation of trophic cascades, chain integration](#analysis_section)
+    2.  [Foodweb analysis: direct and net effects heatmap, identification of trophic chains, calculation of trophic cascades, chain integration](#analysis_section)
 
     </div>
 
@@ -56,6 +56,29 @@ This RMarkdown document is dedicated to the analysis of food webs, particularly 
 
     </div>
 
+### Install packages
+
+```{r message=FALSE}
+
+install.packages("rmarkdown")
+install.packages("deSolve")
+install.packages("NetIndices") # to compute trophic levels and omnivory
+install.packages("sparsevar") # for spectralRadius function
+install.packages("expm") # for %^% operator
+install.packages("purrr") # is_empty function
+install.packages("rlist") # for list.reverse()
+install.packages("igraph") # to show food web as a graph
+install.packages("RColorBrewer")
+install.packages("scales")
+install.packages("ggplot2")
+install.packages("docstring") # allow to call the docstring of functions used in this RMarkdown as native R functions, by calling ?<functionName>
+install.packages("roxygen2")
+install.packages("reshape2")
+install.packages("pracma")
+```
+
+### Load packages and setup
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60), tidy = TRUE)
@@ -76,6 +99,8 @@ library(scales)
 library(ggplot2)
 library(docstring) # allow to call the docstring of functions used in this RMarkdown as native R functions, by calling ?<functionName>
 library(roxygen2)
+library(reshape2) # melt function
+library(pracma)
 ```
 
 ## <a name="foodweb_inference">Inference of food web from data (Vagnon et al. 2021)</a>
@@ -116,58 +141,49 @@ diag(MyFoodWeb) <- -1
 # load("StableFwbs_TL3.Rdata")
 # MyFoodWeb <- StableFwbs_TL3[[5097]][["A"]]
 
-CheckInit <- function(MyFoodWeb){
-  if (!is.matrix(MyFoodWeb)){
-    stop("Error: the variable is not a matrix")
-  }
-  if (!all(is.numeric(MyFoodWeb))){
-    stop("Error: the matrix must contains numerics only")
-  }
-  if (nrow(MyFoodWeb) != ncol(MyFoodWeb)){
-    stop("Error: the matrix is not square")
-  }
-  # No diagonal element can be empty, zero or positive
-  for (element in diag(MyFoodWeb)) {
-    if (is.na(element) || element == 0 || element > 0) {
-      stop("Error: diagonal elements must be numeric < 0. Check the diagonal of the interaction matrix. If elements of the diagonal have not been inferred, set the value to -1.")
-    }
-  }
-  # Verification of positive-negative symmetry (trophic links only)
-  for (i in 1:nrow(MyFoodWeb)){
-    for (j in 1:ncol(MyFoodWeb)){
-      if (i != j){
-        if ((MyFoodWeb[i, j] < 0 && MyFoodWeb[j, i] <= 0) || (MyFoodWeb[i, j] > 0 && MyFoodWeb[j, i] >= 0)){
-          stop(paste("Error: Off-diagonal negative (positive) values must have a positive (negative) value at their symmetry. Problem with positions i =", i, "et j =", j))
-        }
-      }
-    }
-  }
-  # Check for unconnected species: if they exist, remove them from the network
-  FoodWebBis <- MyFoodWeb
-  diag(FoodWebBis) <- 0 # remove self-reg to test if each species is connected with at least another one
-  IdxUnconnected <- which(colSums(FoodWebBis) == 0)
-  if (length(IdxUnconnected) > 0){
-    MyFoodWeb <- MyFoodWeb[-IdxUnconnected,-IdxUnconnected]
-    print(paste0("Species ", paste(IdxUnconnected, collapse = ", "), " are removed because unconnected"))
-  }
-  print("The food web is validated")
-  return(MyFoodWeb)
-}
-
-#debug(CheckInit)
+source("CheckInit.R")
+docstring(CheckInit)
 MyFoodWeb <- CheckInit(MyFoodWeb)
 if (is.null(rownames(MyFoodWeb))){
   rownames(MyFoodWeb) <- 1:dim(MyFoodWeb)[[1]]
 }
 ```
 
-## <a name="analysis_section">Food web analysis: collectivity, connectivity, omnivory, trophic cascades, food chain integration</a>
+### Names & indices
+
+In the remainder of this document, species in the food web are often referred to by their index in the interaction matrix (their line number). To make it easier for the user to draw parallels between indices and species names, the following code section generates a data-frame associating the index and abbreviated name for each species name.
+
+```{r}
+Names <- rownames(MyFoodWeb)
+AbbrevNames <- abbreviate(Names, minlength = 5)
+NamesAndIndices <- data.frame(Names = Names, Abbreviation = AbbrevNames, Indices = 1:length(Names))
+head(NamesAndIndices)
+```
+
+## <a name="analysis_section">Food web analysis: direct and net effects, collectivity, connectance, omnivory, trophic cascades, food chain integration</a>
+
+### Heatmaps of direct and net effects
+
+An easily informative representation of the food web is to simply display the interaction matrix as a heatmap: as a reminder, an interaction is read from column $j$ to row $i$.
+
+What's more, displaying the heatmaps of the direct interaction matrix and the net interaction matrix (the inverse matrix) makes it easy to get a general idea of the similarity/dissimilarity of long-term effects to net effects.
+
+```{r}
+# TODO TODO TODO TODO TODO
+source("Heatmaps.R")
+# debug(Heatmaps)
+Heat <- Heatmaps(MyFoodWeb, NamesAndIndices, Abbrev=FALSE)
+Heat[[1]]
+Heat[[2]]
+```
+
+### In-depth food web analysis
 
 This section calculates several proxies on the network and stores all the results in a list of lists called *FoodWebMetrics*. This list contains :
 
 -   Collectivity [@zelnik2024]
 
--   Connectivity
+-   Connectance
 
 -   Average omnivory
 
@@ -187,21 +203,22 @@ This section calculates several proxies on the network and stores all the result
 
     -   Long-term/short-term ratio showing whether there is a divergence between the two cascades.
 
-    -   Value of the integration of the chain in the food web, i.e. the ratio between interactions within the chain and interactions between the chain and the rest of the food web, a proxy of the collectivity experienced by the trophic chain
+    -   Value of the integration of the chain in the food web, i.e. the ratio of the summed interactions between the chain and the rest of the food web with the summed interactions within the chain. This constitutes a proxy of the collectivity experienced by the trophic chain, the greater if the integration of the chain, the more strongly the chain interacts with the rest of the food web.
 
     </div>
 
 **NB**: Trophic chains are identified as follows; 1) calculation of the trophic level of each species, 2) identification of the maximum trophic level (must be at least 3) and the species with this level (the *Top*), 3) identification of species with a trophic level two levels below the maximum level (if type="n2"), or basal species (if type="basal), (the *Bottom*), 4) identification of intermediate species link the *Top* and *Bottom* (the *Middle*).
 
-With the parameter type="n2" the analysis considers a trophic chain as running from the top of the food web to the top-2 level. If a food web has a maximum trophic level greater than 3, trophic chains will not go all the way down to the basal species.
+With the parameter type="n2" the analysis considers a trophic chain as running from the top of the food web to the top-2 level, considering a classic trophic cascade as an indirect effect of order 2. Therefore, if a food web has a maximum trophic level greater than 3 trophic cascade (and so trophic chains) will not go all the way down to the basal species.
 
 ```{r message=FALSE, warning=FALSE}
 
 # Analysis of the food web
 source("FoodWebAnalysis.R")
 #debug(FoodWebAnalysis)
-# docstring(FoodWebAnalysis) # to see the docstring
-FoodWebMetrics <- FoodWebAnalysis(MyFoodWeb, type="n2")
+docstring(FoodWebAnalysis) # to see the docstring
+Threshold = 20 # 20% is the threshold used in Ledru et al. 2024
+FoodWebMetrics <- FoodWebAnalysis(MyFoodWeb, Threshold, type="n2")
 head(FoodWebMetrics)
 ```
 
