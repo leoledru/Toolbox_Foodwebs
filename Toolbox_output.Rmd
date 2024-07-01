@@ -60,21 +60,21 @@ This RMarkdown document is dedicated to the analysis of food webs, particularly 
 
 ```{r message=FALSE}
 
-install.packages("rmarkdown")
-install.packages("deSolve")
-install.packages("NetIndices") # to compute trophic levels and omnivory
-install.packages("sparsevar") # for spectralRadius function
-install.packages("expm") # for %^% operator
-install.packages("purrr") # is_empty function
-install.packages("rlist") # for list.reverse()
-install.packages("igraph") # to show food web as a graph
-install.packages("RColorBrewer")
-install.packages("scales")
-install.packages("ggplot2")
-install.packages("docstring") # allow to call the docstring of functions used in this RMarkdown as native R functions, by calling ?<functionName>
-install.packages("roxygen2")
-install.packages("reshape2")
-install.packages("pracma")
+# install.packages("rmarkdown")
+# install.packages("deSolve")
+# install.packages("NetIndices") # to compute trophic levels and omnivory
+# install.packages("sparsevar") # for spectralRadius function
+# install.packages("expm") # for %^% operator
+# install.packages("purrr") # is_empty function
+# install.packages("rlist") # for list.reverse()
+# install.packages("igraph") # to show food web as a graph
+# install.packages("RColorBrewer")
+# install.packages("scales")
+# install.packages("ggplot2")
+# install.packages("docstring") # allow to call the docstring of functions used in this RMarkdown as native R functions, by calling ?<functionName>
+# install.packages("roxygen2")
+# install.packages("reshape2")
+# install.packages("pracma")
 ```
 
 ### Load packages and setup
@@ -128,21 +128,24 @@ The following code block loads a test food web, then the ***CheckInit*** functio
 ```{r}
 # Load your food web
 
-# Empirical test food web
-# load("MyFoodWeb.Rdata")
-# load("MyFoodWebLake.Rdata")
+# Empirical test lake food web (Vagnon et al. 2023 Ecology Letters)
 load("LakesDirectSalmo.RData")
 MyFoodWeb <- LakesDirectSalmo[[2]]
 diag(MyFoodWeb) <- -1
-#load("StableFwbs_TL4_b.Rdata")
-#MyFoodWeb <- StableFwbs_TL4[[1]][["A"]]
+
+# Empirical test food web (from Web of Life, Jordi Bascompte's lab)
+# load("BascompteFoodWebs.RData")
+# MyFoodWeb <- AllFwbs[[2]]
+# diag(MyFoodWeb) <- -1
 
 # Simulated test food web
 # load("StableFwbs_TL3.Rdata")
 # MyFoodWeb <- StableFwbs_TL3[[5097]][["A"]]
+#load("StableFwbs_TL4_b.Rdata")
+#MyFoodWeb <- StableFwbs_TL4[[1]][["A"]]
 
 source("CheckInit.R")
-docstring(CheckInit)
+# docstring(CheckInit)
 MyFoodWeb <- CheckInit(MyFoodWeb)
 if (is.null(rownames(MyFoodWeb))){
   rownames(MyFoodWeb) <- 1:dim(MyFoodWeb)[[1]]
@@ -169,10 +172,9 @@ An easily informative representation of the food web is to simply display the in
 What's more, displaying the heatmaps of the direct interaction matrix and the net interaction matrix (the inverse matrix) makes it easy to get a general idea of the similarity/dissimilarity of long-term effects to net effects.
 
 ```{r}
-# TODO TODO TODO TODO TODO
 source("Heatmaps.R")
-# debug(Heatmaps)
-Heat <- Heatmaps(MyFoodWeb, NamesAndIndices, Abbrev=FALSE)
+# docstring(Heatmaps)
+Heat <- Heatmaps(MyFoodWeb, NamesAndIndices, Abbrev=TRUE)
 Heat[[1]]
 Heat[[2]]
 ```
@@ -216,7 +218,7 @@ With the parameter type="n2" the analysis considers a trophic chain as running f
 # Analysis of the food web
 source("FoodWebAnalysis.R")
 #debug(FoodWebAnalysis)
-docstring(FoodWebAnalysis) # to see the docstring
+# docstring(FoodWebAnalysis) # to see the docstring
 Threshold = 20 # 20% is the threshold used in Ledru et al. 2024
 FoodWebMetrics <- FoodWebAnalysis(MyFoodWeb, Threshold, type="n2")
 head(FoodWebMetrics)
@@ -227,45 +229,15 @@ head(FoodWebMetrics)
 Indirect effects can extend across the food web, potentially up to long order, connecting all species. This section calculates for each species with which it is connected for each order up to chosen maximum order. It also gives for each species the limit order (*OrderLim*) at which it has interacted with all others, considering the cumulative orders.
 
 ```{r}
-
-SpNames <- paste(1:nrow(MyFoodWeb))
+source("ComputeLinks.R")
+# docstring(ComputeLinks)
 # Preallocate empty object
 WhoWithWho <- vector("list", nrow(MyFoodWeb))
-# Direct effect without self-reg
-I <- diag(1, nrow = nrow(MyFoodWeb))
-D <- diag(MyFoodWeb) # extract the self-regulation (diagonal)
-MyFoodWeb <- MyFoodWeb / -D # normalize by self-regulation --> non-dimensional interaction matrix
-DirectEffects <- MyFoodWeb + I # Extract the normalized self-regulation
 MaxOrder <- 5 # Order of indirect interactions maximum to compute
-
-# ComputeLinks : for each species find all non-null interactions for each order until MaxOrder
-# Also find the cumulative orderLim from which each species has interacted with all others
-ComputeLinks <- function(i, DirectEffects, MaxOrder, SpNames){
-  order <- 1
-  InnerList <- list()
-  A <- DirectEffects
-  OrderLim <- NULL
-  IdxCumul <- c()
-  cond <- TRUE
-  while(order <= MaxOrder){
-    Idx <- which(A[,i] != 0)
-    InnerList[[paste0("order", order)]] <- Idx
-    IdxCumul <- c(IdxCumul, Idx)
-    if (all(SpNames %in% IdxCumul) & cond){
-      OrderLim <- order
-      cond <- FALSE
-    }
-    order <- order + 1
-    A <- DirectEffects%^%order
-  }
-  InnerList[["orderLim"]] <- OrderLim
-  return(InnerList)
-}
 # Each outer list is a species, which contain as much inner lists as the chosen MaxOrder with the idx of species which who its interact for each, + the orderLim
-WhoWithWho <- lapply(seq_along(WhoWithWho), function(i) ComputeLinks(i, DirectEffects, MaxOrder, SpNames))
+WhoWithWho <- lapply(seq_along(WhoWithWho), function(i) ComputeLinks(i, MyFoodWeb, MaxOrder))
 SpNames <- rownames(MyFoodWeb)
 names(WhoWithWho) <- SpNames
-
 head(WhoWithWho)
 ```
 
@@ -280,30 +252,34 @@ The user can select a species of interest by its index in the interaction matrix
 ```{r message=FALSE, warning=FALSE}
 # Visualization
 source("FoodWebGraph.R")
-#debug(FoodWebGraph)
-docstring(FoodWebGraph) # to see the docstring
+# debug(FoodWebGraph)
+# docstring(FoodWebGraph) # to see the docstring
 # IdxFocusSpecies = the numeric index of the chosen species if any
-Graph <- FoodWebGraph(MyFoodWeb, IdxFocusSpecies = 1)
+Graph <- FoodWebGraph(MyFoodWeb, IdxFocusSpecies = 1, Alpha = 0.5)
 
 par(mar = c(1, 1, 1, 1)) # adjust margins
 width <- 8  # Adjust the width to suit your needs
 height <- 6  # Adjust the height to suit your needs
 options(repr.plot.width = width, repr.plot.height = height)
-
 scale <- 1 # to adjust edges thickness
-plot(Graph, vertex.size = 8, vertex.color = V(Graph)$col,
+
+# co <- layout_with_fr(Graph) # for Fruchterman-Reingold layout
+co <- NULL # for vertical layout (y coordinate of species = trophic position)
+
+plot(Graph, layout = co, vertex.size = 8, vertex.color = V(Graph)$col,
     edge.width = as.numeric(E(Graph)$weight)*scale,
-    edge.curved = 0.5, edge.color = E(Graph)$col)
+    edge.curved = 0, edge.color = E(Graph)$col)
 
 # Add names of species for each node, if any
-Names <- rownames(MyFoodWeb)
+# Names <- NamesAndIndices$Names # full name
+Names <- NamesAndIndices$Abbreviation # Abbreviation 
 if (is.null(Names)){
   Names <- seq(1, nrow(MyFoodWeb))
 }
 text(x = max(par("usr")[1], par("usr")[2]) - 0.5, 
-     y = seq(min(par("usr")[3], par("usr")[4]) + 0.1, 
+     y = rev(seq(min(par("usr")[3], par("usr")[4]) + 0.1, 
              max(par("usr")[3], par("usr")[4]) - 0.1, 
-             length.out = length(Names)),
+             length.out = length(Names))),
      labels = paste(seq_along(Names), Names, sep = ". "), pos = 4, col = "black", cex = 1)
 
 ```
@@ -324,32 +300,36 @@ To see the precise value of each trophic cascade, refer to the *FoodWebMetrics* 
 ## outputs : a graph representing the food web, with links of inverted chain in colors (if any), all others links are black.
 source("InvertedChainGraph.R")
 # debug(InvertedChainGraph)
-docstring(InvertedChainGraph)
-Outputs <- InvertedChainGraph(MyFoodWeb, FoodWebMetrics)
+# docstring(InvertedChainGraph)
+Outputs <- InvertedChainGraph(MyFoodWeb, FoodWebMetrics, Alpha = 0.1)
 Graph <- Outputs[["Graph"]]
 par(mar = c(1, 1, 1, 1)) # adjust margins
 width <- 8  # Ajustez la largeur selon vos besoins
 height <- 6  # Ajustez la hauteur selon vos besoins
 options(repr.plot.width = width, repr.plot.height = height)
+scale <- 0.6 # to adjust edges width
 
-scale <- 0.5 # to adjust edges width
-plot(Graph, vertex.size = 8, 
+# co <- layout_with_fr(Graph) # for Fruchterman-Reingold layout
+co <- NULL # for vertical layout (y coordinate of species = trophic position)
+
+plot(Graph, layout = co, vertex.size = 8, 
     edge.width = as.numeric(E(Graph)$weight)*scale,
-    edge.curved = 0.5, edge.color = E(Graph)$col)
+    edge.curved = 0, edge.color = E(Graph)$col)
 
 # Add names of species for each node, if any
-Names <- rownames(MyFoodWeb)
+# Names <- NamesAndIndices$Names # full name
+Names <- NamesAndIndices$Abbreviation # Abbreviation 
 if (is.null(Names)){
   Names <- seq(0, nrow(MyFoodWeb))
 }
 text(x = max(par("usr")[1], par("usr")[2]) - 0.5, 
-     y = seq(min(par("usr")[3], par("usr")[4]) + 0.1, 
+     y = rev(seq(min(par("usr")[3], par("usr")[4]) + 0.1, 
              max(par("usr")[3], par("usr")[4]) - 0.1, 
-             length.out = length(Names)),
+             length.out = length(Names))),
      labels = paste(seq_along(Names), Names, sep = ". "), pos = 4, col = "black", cex = 1)
 # Warning : si plusieurs chaînes avec inversion ont un lien en commun une couleur va se superposer à l'autre
 if (is.null(Outputs[["InvertedChains"]])){
-  print("Aucune chaîne avec inversion de cascade")
+  print("No chain with cascade inversion")
 }
   
 # print(Outputs[["InvertedChains"]])
@@ -409,9 +389,18 @@ One estimate of stability, inspired by @neutel2002stability and @neutel2007recon
 ```{r}
 source("StabilityAlgorithm.R")
 #debug(StabilityAlgorithm)
-docstring(StabilityAlgorithm)
+# docstring(StabilityAlgorithm)
 Value <- StabilityAlgorithm(MyFoodWeb, SelfRegInit = 1, Threshold = 10^-4)
 cat("The minimum self-regulation (with the Threshold used) that must be applied to the","\n", "network for it to be stable is : ", Value)
+```
+
+### Another proxy of stability: the recovery time
+
+This proxy was introduced by @pimm1977, a larger recovery time indicates a lower stability. However, be careful of some limitations highlighted by @arnoldi2018.
+
+```{r}
+RecoveryTime <- -1 / max(Re(eigen(MyFoodWeb, only.values = T)$values))
+paste("RecoveryTime is ", RecoveryTime)
 ```
 
 ### Food web dynamics
@@ -426,7 +415,7 @@ The code section below tests whether, given the input parameters (growth rate an
 
 # outputs : 1) temporal densities of the stable run after incremental removal of extinct species, if any, 2) the food web matrix, with rows and colums of extinct species removed, if any.
 source("FoodWebEquilibrium.R")
-docstring(FoodWebEquilibrium)
+# docstring(FoodWebEquilibrium)
 # Set a new self-regulation if desired
 # diag(MyFoodWeb) <- -1
 
@@ -462,7 +451,7 @@ Once we have the configuration of the system at equilibrium (the species that pe
 ```{r}
 
 source("FoodWebPerturb.R")
-docstring(FoodWebPerturb)
+# docstring(FoodWebPerturb)
 #debug(FoodWebPerturb)
 
 # Set a self-regulation value if none inferred

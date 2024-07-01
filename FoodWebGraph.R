@@ -1,11 +1,13 @@
-FoodWebGraph <- function(MyFoodWeb, IdxFocusSpecies = NULL){
+FoodWebGraph <- function(MyFoodWeb, IdxFocusSpecies = NULL, Alpha = 1){
   #' @title Food web graphic
   #' @description 
     #' Vizualisation of the food web as a graphic where species are nodes and interactions are links
   #' @param MyFoodWeb is the interaction square matrix of the food web of interest
   #' @param IdxFocusSpecies is the index of a species which we want to highlight its links, if any, the species' node will appear in green, the species' direct links will appear in red, as well as connected nodes, and in blue will be second-order links and connected species
+  #' @param Alpha is the parameter of opacity of non-focus links
   #' @returns the Graph object to vizualise
   
+  '%!in%' <- function(x,y)!('%in%'(x,y))
   # Trophic Levels for nodes' y position
   I <- diag(1, nrow = nrow(MyFoodWeb))
   D <- diag(MyFoodWeb) # extract the self-regulation (diagonal)
@@ -51,6 +53,8 @@ FoodWebGraph <- function(MyFoodWeb, IdxFocusSpecies = NULL){
     EdgesAll$color <- ifelse(EdgesAll$prey %in% DirectLinks & EdgesAll$pred %in% SecondOrderLinks, rgb(0,0,1), EdgesAll$color)
     EdgesAll$color <- ifelse(EdgesAll$pred %in% DirectLinks & EdgesAll$prey %in% SecondOrderLinks, rgb(0,0,1), EdgesAll$color)
     NodeList$color <- ifelse(NodeList$nodes != DirectLinks & NodeList$nodes %in% SecondOrderLinks, rgb(0,0,1,.5), NodeList$color)
+    # all non-focus link with reduced opacity
+    EdgesAll$color <- ifelse(EdgesAll$color == "#000000", rgb(0,0,0,Alpha), EdgesAll$color)
   }
 
   colnames(EdgesAll) <- c("from", "to","weight", "col")

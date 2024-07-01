@@ -1,9 +1,10 @@
-InvertedChainGraph <- function(MyFoodWeb, FoodWebMetrics){
+InvertedChainGraph <- function(MyFoodWeb, FoodWebMetrics, Alpha = 1){
   #' @title Trophic Cascade Inversion
   #' @description
     #' Identification and graphical vizualisation of trophic chains with a long-term inversion of trophic cascade
   #' @param MyFoodWeb is the interaction square matrix of the food web of interest
   #' @param FoodWebMetrics is the list of trophic chains returned by the function FoodWebAnalysis.R
+  #' @param Alpha is the parameter of opacity of non-focus links
 
   FoodWeb <- FoodWebMetrics[["FoodWebMetrics"]]
   
@@ -46,6 +47,7 @@ InvertedChainGraph <- function(MyFoodWeb, FoodWebMetrics){
       Bottom <- Bottoms[[i]]
       EdgesAll$color <- ifelse(EdgesAll$pred == Top & EdgesAll$prey == Middle, ColPal[[Col]], EdgesAll$color)
       EdgesAll$color <- ifelse(EdgesAll$pred == Middle & EdgesAll$prey == Bottom, ColPal[[Col]], EdgesAll$color)
+      EdgesAll$color <- ifelse(EdgesAll$color == "#000000", rgb(0,0,0,Alpha), EdgesAll$color)
     }
   }
   colnames(EdgesAll) <- c("from", "to","weight", "col")
@@ -67,7 +69,6 @@ InvertedChainGraph <- function(MyFoodWeb, FoodWebMetrics){
   }else{
     Ouputs <- list("InvertedChains" = NULL, "Graph" = Graph)
   }
-  
-  
+
   return(Ouputs)
 }

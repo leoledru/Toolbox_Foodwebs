@@ -1,5 +1,5 @@
 FoodWebPerturb <- function(MyFoodWeb, Tmax, Tstep, GrowthRate, DeathRate, IdxPerturb, Perturb, type){
-  #' @title Dynamics resposne of food web perturbation
+  #' @title Dynamics response of food web perturbation
   #' @description
     #' Simulates a stable system until equilibrium, then perturb the chosen species (one or several) and simulates the system dynamics response
   #' @param MyFoodWeb is the interaction square matrix of the *stable* food web of interest
