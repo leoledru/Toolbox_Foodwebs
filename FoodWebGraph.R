@@ -25,7 +25,6 @@ FoodWebGraph <- function(MyFoodWeb, IdxFocusSpecies = NULL, Alpha = 1){
   # x <- runif(nrow(MyFoodWeb))
   xSample <- c(1:nrow(MyFoodWeb))
   x <- sample(xSample)
-  # y position des noeuds (defini par le niveau trophique)
   y <- yCoord # real troph levels
   # y <- TrophLevels # round troph levels
   NodeList <- data.frame(Nodes, x, y, rgb(1,1,1,))
@@ -61,7 +60,7 @@ FoodWebGraph <- function(MyFoodWeb, IdxFocusSpecies = NULL, Alpha = 1){
   colnames(NodeList) <- c("nodes","x","y","color")
   
   # Créer le graphique à partir des arêtes et des positions x et y
-  Graph <- graph_from_data_frame(vertices = NodeList, d = EdgesAll, directed = F)
+  Graph <- graph_from_data_frame(vertices = NodeList, d = EdgesAll, directed = T)
   
   return(Graph)
 }

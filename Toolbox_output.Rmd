@@ -179,9 +179,24 @@ Heat[[1]]
 Heat[[2]]
 ```
 
-### In-depth food web analysis
+### Length of chains
 
-This section calculates several proxies on the network and stores all the results in a list of lists called *FoodWebMetrics*. This list contains :
+A trophic chain is considered to start from a predator-free species to a prey-free species (basal species). The function below identifies all the chains in the food web meeting this criterion and measures the average chain size in the food web, as well as the standard deviation.
+
+```{r}
+source("ChainCount.R")
+# doctrsing(ChainCount)
+ChainsLength <- ChainCount(MyFoodWeb, NamesAndIndices)
+paste("Mean chains length = ", ChainsLength[["MeanChainsLength"]], " sd chains length = ", ChainsLength[["SdChainsLength"]])
+```
+
+### In-depth trophic cascades analysis
+
+This section calculates several proxies on the food web and especially on each trophic chains.
+
+However, as can be seen from the previous function on chain length, the network may contain predator apexes with different trophic levels (e.g. 3 and 4), so the user must choose from which trophic level to evaluate the food chains. If there are predator apexes at several levels, the user could execute the function once for each level. On the other hand, if he chooses a trophic level with no predator apex (predator having no predator itself) then the function will return an error message. Furthermore, in order to evaluate the trophic cascade process, the trophic level selected must be at least 3.
+
+All the results are stored in a list of lists called *FoodWebMetrics*. This list contains :
 
 -   Collectivity [@zelnik2024]
 
@@ -217,10 +232,11 @@ With the parameter type="n2" the analysis considers a trophic chain as running f
 
 # Analysis of the food web
 source("FoodWebAnalysis.R")
-#debug(FoodWebAnalysis)
+# debug(FoodWebAnalysis)
 # docstring(FoodWebAnalysis) # to see the docstring
 Threshold = 20 # 20% is the threshold used in Ledru et al. 2024
-FoodWebMetrics <- FoodWebAnalysis(MyFoodWeb, Threshold, type="n2")
+TopLevel = 3
+FoodWebMetrics <- FoodWebAnalysis(MyFoodWeb, TopLevel, NamesAndIncides, Threshold, type="basal")
 head(FoodWebMetrics)
 ```
 
@@ -263,12 +279,13 @@ height <- 6  # Adjust the height to suit your needs
 options(repr.plot.width = width, repr.plot.height = height)
 scale <- 1 # to adjust edges thickness
 
-# co <- layout_with_fr(Graph) # for Fruchterman-Reingold layout
-co <- NULL # for vertical layout (y coordinate of species = trophic position)
+co <- layout_with_fr(Graph) # for Fruchterman-Reingold layout
+# co <- NULL # for vertical layout (y coordinate of species = trophic position)
 
 plot(Graph, layout = co, vertex.size = 8, vertex.color = V(Graph)$col,
     edge.width = as.numeric(E(Graph)$weight)*scale,
-    edge.curved = 0, edge.color = E(Graph)$col)
+    edge.curved = 0, edge.color = E(Graph)$col,
+    edge.arrow.size = 0.5)
 
 # Add names of species for each node, if any
 # Names <- NamesAndIndices$Names # full name
@@ -294,7 +311,7 @@ The following code section identifies trophic chains likely to express an invert
 
 To see the precise value of each trophic cascade, refer to the *FoodWebMetrics* list calculated in the [Food web analysis section](#analysis_section).
 
-```{r message=FALSE}
+```{r warning=FALSE, message=FALSE}
 
 # Visualization of Inverted chain(s)
 ## outputs : a graph representing the food web, with links of inverted chain in colors (if any), all others links are black.
@@ -335,7 +352,7 @@ if (is.null(Outputs[["InvertedChains"]])){
 # print(Outputs[["InvertedChains"]])
 ```
 
-## \<a name="stability_n_dynamics_section"\>Stability and dynamics of food web</a>
+## <a name="stability_n_dynamics_section">Stability and dynamics of food web</a>
 
 ### Visualizing the network in eigenvalue space
 

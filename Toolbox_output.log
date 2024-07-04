@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2024.3.15)  1 JUL 2024 17:14
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2024.3.15)  4 JUL 2024 15:52
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -580,93 +580,93 @@ Underfull \hbox (badness 10000) in paragraph at lines 328--330
  []
 
 [2] [3 <./Toolbox_output_files/figure-latex/unnamed-chunk-4-1.pdf> <./Toolbox_o
-utput_files/figure-latex/unnamed-chunk-4-2.pdf>] [4] [5] [6] [7] [8] [9] [10] [
-11]
+utput_files/figure-latex/unnamed-chunk-4-2.pdf>] [4] [5] [6]
 LaTeX Font Info:    Trying to load font information for TS1+lmtt on input line 
-1177.
+950.
 (/usr/share/texmf/tex/latex/lm/ts1lmtt.fd
 File: ts1lmtt.fd 2009/10/30 v1.6 Font defs for Latin Modern
-) [12] [13] [14] [15] [16] [17] [18]
-<Toolbox_output_files/figure-latex/unnamed-chunk-7-1.pdf, id=131, 359.3425pt x 
-282.05376pt>
-File: Toolbox_output_files/figure-latex/unnamed-chunk-7-1.pdf Graphic file (typ
-e pdf)
-<use Toolbox_output_files/figure-latex/unnamed-chunk-7-1.pdf>
-Package pdftex.def Info: Toolbox_output_files/figure-latex/unnamed-chunk-7-1.pd
-f  used on input line 1204.
-(pdftex.def)             Requested size: 359.36902pt x 282.07457pt.
-[19 <./Toolbox_output_files/figure-latex/unnamed-chunk-7-1.pdf>]
-
-LaTeX Warning: Hyper reference `analysis_section' on page 20 undefined on input
- line 1229.
-
-<Toolbox_output_files/figure-latex/unnamed-chunk-8-1.pdf, id=151, 359.3425pt x 
+) [7] [8] [9] [10] [11] [12] [13] [14]
+<Toolbox_output_files/figure-latex/unnamed-chunk-8-1.pdf, id=117, 359.3425pt x 
 282.05376pt>
 File: Toolbox_output_files/figure-latex/unnamed-chunk-8-1.pdf Graphic file (typ
 e pdf)
 <use Toolbox_output_files/figure-latex/unnamed-chunk-8-1.pdf>
 Package pdftex.def Info: Toolbox_output_files/figure-latex/unnamed-chunk-8-1.pd
-f  used on input line 1231.
+f  used on input line 977.
 (pdftex.def)             Requested size: 359.36902pt x 282.07457pt.
-<Toolbox_output_files/figure-latex/unnamed-chunk-9-1.pdf, id=152, 459.7175pt x 
-313.17pt>
+
+LaTeX Warning: Hyper reference `analysis_section' on page 15 undefined on input
+ line 1002.
+
+<Toolbox_output_files/figure-latex/unnamed-chunk-9-1.pdf, id=118, 359.3425pt x 
+282.05376pt>
 File: Toolbox_output_files/figure-latex/unnamed-chunk-9-1.pdf Graphic file (typ
 e pdf)
 <use Toolbox_output_files/figure-latex/unnamed-chunk-9-1.pdf>
 Package pdftex.def Info: Toolbox_output_files/figure-latex/unnamed-chunk-9-1.pd
-f  used on input line 1241.
-(pdftex.def)             Requested size: 459.7304pt x 313.17877pt.
-[20 <./Toolbox_output_files/figure-latex/unnamed-chunk-8-1.pdf>] [21 <./Toolbox
-_output_files/figure-latex/unnamed-chunk-9-1.pdf>]
-<Toolbox_output_files/figure-latex/unnamed-chunk-12-1.pdf, id=187, 453.695pt x 
-313.17pt>
-File: Toolbox_output_files/figure-latex/unnamed-chunk-12-1.pdf Graphic file (ty
+f  used on input line 1004.
+(pdftex.def)             Requested size: 359.36902pt x 282.07457pt.
+[15 <./Toolbox_output_files/figure-latex/unnamed-chunk-8-1.pdf>]
+<Toolbox_output_files/figure-latex/unnamed-chunk-10-1.pdf, id=136, 459.7175pt x
+ 313.17pt>
+File: Toolbox_output_files/figure-latex/unnamed-chunk-10-1.pdf Graphic file (ty
 pe pdf)
-<use Toolbox_output_files/figure-latex/unnamed-chunk-12-1.pdf>
-Package pdftex.def Info: Toolbox_output_files/figure-latex/unnamed-chunk-12-1.p
-df  used on input line 1304.
-(pdftex.def)             Requested size: 453.6939pt x 313.16922pt.
-
-Overfull \hbox (54.64417pt too wide) in paragraph at lines 1303--1305
-[]\T1/lmr/m/n/10 (-20) [1] 1 2 in-te-ger(0) [] 
- []
-
-<Toolbox_output_files/figure-latex/unnamed-chunk-13-1.pdf, id=188, 453.695pt x 
+<use Toolbox_output_files/figure-latex/unnamed-chunk-10-1.pdf>
+Package pdftex.def Info: Toolbox_output_files/figure-latex/unnamed-chunk-10-1.p
+df  used on input line 1012.
+(pdftex.def)             Requested size: 459.7304pt x 313.17877pt.
+[16 <./Toolbox_output_files/figure-latex/unnamed-chunk-9-1.pdf> <./Toolbox_outp
+ut_files/figure-latex/unnamed-chunk-10-1.pdf>]
+<Toolbox_output_files/figure-latex/unnamed-chunk-13-1.pdf, id=165, 453.695pt x 
 313.17pt>
 File: Toolbox_output_files/figure-latex/unnamed-chunk-13-1.pdf Graphic file (ty
 pe pdf)
 <use Toolbox_output_files/figure-latex/unnamed-chunk-13-1.pdf>
 Package pdftex.def Info: Toolbox_output_files/figure-latex/unnamed-chunk-13-1.p
-df  used on input line 1318.
-(pdftex.def)             Requested size: 453.6939pt x 313.16922pt.
-<Toolbox_output_files/figure-latex/unnamed-chunk-13-2.pdf, id=189, 453.695pt x 
-313.17pt>
-File: Toolbox_output_files/figure-latex/unnamed-chunk-13-2.pdf Graphic file (ty
-pe pdf)
-<use Toolbox_output_files/figure-latex/unnamed-chunk-13-2.pdf>
-Package pdftex.def Info: Toolbox_output_files/figure-latex/unnamed-chunk-13-2.p
-df  used on input line 1319.
+df  used on input line 1075.
 (pdftex.def)             Requested size: 453.6939pt x 313.16922pt.
 
-Underfull \hbox (badness 10000) in paragraph at lines 1318--1320
+Overfull \hbox (54.64417pt too wide) in paragraph at lines 1074--1076
+[]\T1/lmr/m/n/10 (-20) [1] 1 2 in-te-ger(0) [] 
+ []
+
+[17]
+<Toolbox_output_files/figure-latex/unnamed-chunk-14-1.pdf, id=174, 453.695pt x 
+313.17pt>
+File: Toolbox_output_files/figure-latex/unnamed-chunk-14-1.pdf Graphic file (ty
+pe pdf)
+<use Toolbox_output_files/figure-latex/unnamed-chunk-14-1.pdf>
+Package pdftex.def Info: Toolbox_output_files/figure-latex/unnamed-chunk-14-1.p
+df  used on input line 1089.
+(pdftex.def)             Requested size: 453.6939pt x 313.16922pt.
+<Toolbox_output_files/figure-latex/unnamed-chunk-14-2.pdf, id=175, 453.695pt x 
+313.17pt>
+File: Toolbox_output_files/figure-latex/unnamed-chunk-14-2.pdf Graphic file (ty
+pe pdf)
+<use Toolbox_output_files/figure-latex/unnamed-chunk-14-2.pdf>
+Package pdftex.def Info: Toolbox_output_files/figure-latex/unnamed-chunk-14-2.p
+df  used on input line 1090.
+(pdftex.def)             Requested size: 453.6939pt x 313.16922pt.
+
+Underfull \hbox (badness 10000) in paragraph at lines 1089--1091
 [][]
  []
 
-[22 <./Toolbox_output_files/figure-latex/unnamed-chunk-12-1.pdf>] [23 <./Toolbo
-x_output_files/figure-latex/unnamed-chunk-13-1.pdf> <./Toolbox_output_files/fig
-ure-latex/unnamed-chunk-13-2.pdf>] [24] (./Toolbox_output.aux)
+[18 <./Toolbox_output_files/figure-latex/unnamed-chunk-13-1.pdf>] [19 <./Toolbo
+x_output_files/figure-latex/unnamed-chunk-14-1.pdf> <./Toolbox_output_files/fig
+ure-latex/unnamed-chunk-14-2.pdf>] [20] (./Toolbox_output.aux)
 
 LaTeX Warning: There were undefined references.
 
  ) 
 Here is how much of TeX's memory you used:
- 14103 strings out of 478287
- 224634 string characters out of 5849289
- 597506 words of memory out of 5000000
- 31871 multiletter control sequences out of 15000+600000
- 531109 words of font info for 138 fonts, out of 8000000 for 9000
+ 14104 strings out of 478287
+ 224638 string characters out of 5849289
+ 590341 words of memory out of 5000000
+ 31873 multiletter control sequences out of 15000+600000
+ 531178 words of font info for 139 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 74i,6n,77p,1414b,1279s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 74i,6n,77p,1414b,1152s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texmf/fonts/enc/dvips/lm/lm-ts1.enc}{/usr/share/texmf/fonts/enc/d
 vips/lm/lm-ec.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-mathsy.enc}{/usr/shar
 e/texmf/fonts/enc/dvips/lm/lm-rm.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-ma
@@ -678,10 +678,10 @@ usr/share/texmf/fonts/type1/public/lm/lmr12.pfb></usr/share/texmf/fonts/type1/p
 ublic/lm/lmr17.pfb></usr/share/texmf/fonts/type1/public/lm/lmri10.pfb></usr/sha
 re/texmf/fonts/type1/public/lm/lmsy10.pfb></usr/share/texmf/fonts/type1/public/
 lm/lmtt10.pfb></usr/share/texmf/fonts/type1/public/lm/lmtti10.pfb>
-Output written on Toolbox_output.pdf (24 pages, 603306 bytes).
+Output written on Toolbox_output.pdf (20 pages, 610730 bytes).
 PDF statistics:
- 366 PDF objects out of 1000 (max. 8388607)
- 284 compressed objects within 3 object streams
- 59 named destinations out of 1000 (max. 500000)
- 32945 words of extra memory for PDF output out of 35830 (max. 10000000)
+ 354 PDF objects out of 1000 (max. 8388607)
+ 276 compressed objects within 3 object streams
+ 56 named destinations out of 1000 (max. 500000)
+ 32953 words of extra memory for PDF output out of 35830 (max. 10000000)
 
