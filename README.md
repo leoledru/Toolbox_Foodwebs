@@ -5,6 +5,7 @@
 | `Toolbox_output.Rmd` | The main RMarkdown file, combining detailed writing and R scripts. All the analysis are carried out within this file, using the various R functions available as .R files in the github folder.  |
 | `CheckInit.R` | Check if the interaction matrix representing the food web is correct and ready for further analysis. |
 | `Heatmaps.R` | Heatmaps of direct and net effects, as a reminder an interaction is read from column j to row i. |
+| `ChainCount.R` | Identifies all the trophic chains, i.e. number of paths from apex predator(s) (predator species without predator) to basal species, stores them and measures their length. Gives also the mean length and the standard-deviation. |
 | `FoodWebAnalysis.R` | Identification of trophic chains and computation of several proxies: 1) Collectivity, 2) Connectance, 3) Average omnivory, 4) a sub-list with measures characterizing the trophic cascade process expressed by each trophic chain in the food web. |
 | `ComputeLinks.R` | For each species find all non-null interactions for each order until a maximum order set by the user. Also find the cumulative *orderLim* from which each species has interacted with all others in the food web. |
 | `FoodWebGraph.R` | Vizualisation of the food web as a graphic where species are nodes and interactions are links |
